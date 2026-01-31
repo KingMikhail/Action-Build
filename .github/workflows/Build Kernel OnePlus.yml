@@ -1,4 +1,4 @@
-name: Build All OnePlus Kernels
+name: Build SukiSU-Ultra
 on:
   workflow_dispatch:
     inputs:
@@ -94,17 +94,17 @@ on:
         type: string
         description: "自定义构建时间(输入F使用当前UTC时间)"
         required: false
-        default: "Thu Dec 11 04:17:27 UTC 2025"
+        default: "Sat Jan 30 11:12:13 UTC 2026"
       KSU_META:
         type: string
         description: "分支名(必填)/自定义版本标识(留空不修改)/回退分支提交哈希版本(留空不修改)"
         required: false
-        default: "builtin/Numbersf/"
+        default: "builtin/KingMikhail/"
       SUFFIX:
         type: string
         description: "自定义内核后缀(不输入使用随机字符串)"
         required: false
-        default: ""
+        default: "KingMikhail-Xclusive"
       SUBLEVEL:
         description: "自定义内核等级欺骗(SUBLEVEL)"
         required: false
@@ -640,7 +640,7 @@ jobs:
           if [[ -z "$CUSTOM_TAG" ]]; then
             VERSION_FULL="v$KSU_API_VERSION-$USE_HASH@$BRANCH_NAME"
           else
-            VERSION_FULL="v$KSU_API_VERSION-$CUSTOM_TAG@$BRANCH_NAME[$USE_HASH]"
+            VERSION_FULL="$KSU_API_VERSION-$CUSTOM_TAG"
           fi
 
           # 清理并写入 Kbuild 版本信息
@@ -1075,7 +1075,7 @@ jobs:
 
       - name: Make AnyKernel3
         run: |
-          git clone https://github.com/Numbersf/AnyKernel3 --depth=1
+          git clone https://github.com/kingmikhail/AnyKernel3 --depth=1
           rm -rf ./AnyKernel3/.git
           mkdir -p kernel_workspace/kernel_platform/out/Final-Image-Find/
           image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1)
@@ -1171,7 +1171,7 @@ jobs:
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AnyKernel3_SukiSUUltra_${{ env.KSUVER }}_${{ steps.extract_info.outputs.value }}(${{ env.TKERNEL_VERSION }})${{ steps.suffix.outputs.value }}
+          name: AK3-SukiSU-Ultra-${{ env.KSUVER }}
           path: ./AnyKernel3/*
 
       - name: Download and Unzip ZRAM
