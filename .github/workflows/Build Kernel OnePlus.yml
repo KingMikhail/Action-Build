@@ -1,4 +1,4 @@
-name: Build SukiSU-Ultra
+name: Build SukiSU-Ultra-King
 on:
   workflow_dispatch:
     inputs:
@@ -6,7 +6,7 @@ on:
         type: choice
         description: "配置文件"
         required: true
-        default: oneplus_ace2_pro_b
+        default: oneplus_13_b
         options:
           - oneplus_10r_v
           - oneplus_nord_3_v
@@ -386,13 +386,13 @@ jobs:
           fi
           ccache -s
 
-      - name: Install Repo Tool
+      - name: Install Repository Tool
         run: |
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
           chmod a+x ~/repo
           sudo mv ~/repo /usr/local/bin/repo
 
-      - name: Initialize Repo and Sync
+      - name: Initialize Repository & Sync
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
@@ -565,7 +565,7 @@ jobs:
           git add -A
           git commit -m "Random suffix & remove -dirty"
 
-      - name: Resolve Manager Source
+      - name: Resolve SukiSU-Ultra Source
         id: manager
         run: |
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
@@ -592,7 +592,7 @@ jobs:
           echo "manager_branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "manager_artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
-      - name: Add SukiSU Ultra
+      - name: Add SukiSU-Ultra Hash
         run: |
           cd kernel_workspace/kernel_platform
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
@@ -672,7 +672,7 @@ jobs:
           grep "KSU_VERSION_FULL" kernel/Kbuild
           echo "::endgroup::"
 
-      - name: Apply Patches SukiSU Ultra
+      - name: Apply SukiSU-Ultra Patches
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
@@ -783,7 +783,7 @@ jobs:
           patch -p1 -F 3 < "${PATCH_DIR}/hmbird_patch.patch" || true
           echo "OGKI转换GKI_patch完成"
 
-      - name: Apply UNICODE_BYPASS
+      - name: Apply Unicode Bypass Fix
         if: ${{ github.event.inputs.UNICODE_BYPASS == 'true' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
@@ -794,7 +794,7 @@ jobs:
             patch -p1 --forward < "${PATCH_DIR}/unicode_bypass_fix_6.1+.patch" || true
           fi
 
-      - name: Apply ZRAM
+      - name: Apply ZRAM Algorithm LZ4 LZ4K LZ4KD
         if: ${{ github.event.inputs.ZRAM == 'true' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/other/zram/zram_patch/${{ env.KERNEL_VERSION }}"
@@ -806,7 +806,7 @@ jobs:
           patch -p1 -F 3 < "${PATCH_DIR}/lz4k_oplus.patch" || true
           echo 'lz4k_oplus_patch完成'
 
-      - name: Apply SCHED
+      - name: Apply Sched Patch
         env:
           FILE: ${{ github.event.inputs.FILE }}
         if: ${{ github.event.inputs.SCHED == 'true' }}
@@ -825,7 +825,7 @@ jobs:
             exit 12
           fi
 
-      - name: Apply LSM_BBG
+      - name: Apply LSM Baseband Guard Fix Modified
         if: ${{ github.event.inputs.LSM == 'true' }}
         run: |
           cd kernel_workspace/kernel_platform/common
@@ -935,7 +935,7 @@ jobs:
           # 移除构建审查
           sed -i 's/check_defconfig//' ./build.config.gki
 
-      - name: Fix IPv6_NAT Error
+      - name: Apply IPV6 NAT Error Fix
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
@@ -973,7 +973,7 @@ jobs:
             fi
           done
 
-      - name: Enable lto=thin For FAST
+      - name: Enable LTO Thin For Fast
         if: ${{ (env.KERNEL_VERSION == '5.10' || env.KERNEL_VERSION == '5.15') && github.event.inputs.FAST_BUILD == 'true' }}
         run: |
           cd kernel_workspace/kernel_platform
@@ -990,7 +990,7 @@ jobs:
           echo "Disabling GPUEB for MTK kernel 5.10"
           sed -i '/obj-y.*gpueb/d' kernel_workspace/kernel-5.10/drivers/gpu/mediatek/Makefile
 
-      - name: Build Kernel FAST
+      - name: Build Kernel Fast
         if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
         id: fast_build
         run: |
@@ -1061,7 +1061,7 @@ jobs:
           make -j$(nproc --all) O=out $MAKE_ARGS
           ccache -s
 
-      - name: Fallback to Build Kernel
+      - name: Fallback To Build Kernel
         if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
         run: |
           cd kernel_workspace
@@ -1073,7 +1073,7 @@ jobs:
             ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
           fi
 
-      - name: Make AnyKernel3
+      - name: Make AnyKernel3 King
         run: |
           git clone https://github.com/kingmikhail/AnyKernel3 --depth=1
           rm -rf ./AnyKernel3/.git
@@ -1096,7 +1096,7 @@ jobs:
             cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
           fi
 
-      - name: Apply patch_linux and Replace Image
+      - name: Apply Patch Linux KPM Built-in & Replace Image
         if: ${{ github.event.inputs.KPM == 'KPM' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/kpm"
@@ -1109,7 +1109,7 @@ jobs:
           mv oImage Image
           cp Image "${GITHUB_WORKSPACE}/AnyKernel3/Image"
 
-      - name: Download Latest SUSFS Module from CI
+      - name: Download Latest SuSFS Module CI Canary
         if: ${{ github.event.inputs.SUSFS_CI == 'CI' && github.event.inputs.SUSFS_META != '-1' }}
         continue-on-error: true
         run: |
@@ -1129,14 +1129,14 @@ jobs:
             fi
           fi
 
-      - name: Download Latest SUSFS Module from Release
+      - name: Download Latest SuSFS Module Release Stable
         if: ${{ github.event.inputs.SUSFS_CI == 'Release' && github.event.inputs.SUSFS_META != '-1' }}
         continue-on-error: true
         run: |
           wget -O ksu_module_susfs_1.5.2+_Release.zip https://github.com/sidex15/ksu_module_susfs/releases/latest/download/ksu_module_susfs_1.5.2+.zip
           cp ksu_module_susfs_1.5.2+_Release.zip ./AnyKernel3/
 
-      - name: Download Latest SukiSU-Ultra APK from CI
+      - name: Download Latest SukiSU-Ultra Apk CI Canary
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1163,7 +1163,7 @@ jobs:
           curl -fL -H "Authorization: token $GITHUB_TOKEN" -o "${MANAGER_ARTIFACT}.zip" "$artifact_url"
           unzip -j "${MANAGER_ARTIFACT}.zip" "*.apk" -d ./AnyKernel3/
 
-      - name: Set zip Suffix
+      - name: Set Zip Suffix
         id: suffix
         run: |
           echo "value=${{ github.event.inputs.ZRAM == 'true' && '_LZ4KD' || '' }}${{ github.event.inputs.KPM == 'KPM' && '_KPM' || github.event.inputs.KPM == 'KPN' && '_KPN' || '' }}${{ github.event.inputs.LSM == 'true' && '_LSM' || '' }}_ILH${{ github.event.inputs.SCHED== 'true' && '_SCHED' || '' }}" >> $GITHUB_OUTPUT
@@ -1174,7 +1174,7 @@ jobs:
           name: AK3-SukiSU-Ultra-${{ env.KSUVER }}
           path: ./AnyKernel3/*
 
-      - name: Download and Unzip ZRAM
+      - name: Download & Unzip ZRAM FurLC Repository
         if: ${{ github.event.inputs.ZRAM == 'true' }}
         id: zram_find
         run: |
@@ -1239,5 +1239,5 @@ jobs:
           name: ZRAM-Module_${{ env.KERNEL_VERSION }}_${{ steps.extract_info.outputs.value }}
           path: ZRAM-Module/*
 
-      - name: Post-build Disk Check
+      - name: Post-Build Disk Check
         run: df -h
