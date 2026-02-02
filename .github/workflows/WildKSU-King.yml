@@ -59,6 +59,7 @@ on:
         default: stable
         options:
           - stable
+          - stable-spoof
           - beta
           - canary
       SUSFS_CI:
@@ -564,13 +565,21 @@ jobs:
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
 
           case "$MANAGER_SOURCE" in
-            SPOOF)
-              BRANCH="stable"
-              ARTIFACT="manager-spoofed"
+            beta)
+              BRANCH="beta"
+              ARTIFACT="=Manager-release"
               ;;
-            OFFICIAL|*)
+            canary)
+              BRANCH="canary"
+              ARTIFACT="Manager-release"
+              ;;
+            stable)
+              BRANCH="main"
+              ARTIFACT="=Manager-release"
+              ;;
+            stable-spoof|*)
               BRANCH="stable"
-              ARTIFACT="manager"
+              ARTIFACT="Manager-release"
               ;;
           esac
 
