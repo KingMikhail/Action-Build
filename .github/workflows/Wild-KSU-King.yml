@@ -616,7 +616,7 @@ jobs:
           [[ -n "$MANUAL_HASH" ]] && echo "Manually specify hash: $MANUAL_HASH" || echo "Manually specify hash: Not enabled"
 
           curl -LSs "https://raw.githubusercontent.com/WildKernels/Wild_KSU/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$BRANCH_NAME"
-          cd ./KernelSU
+          cd ./Wild_KSU
 
           # If a manual hash was specified, switch to this commit
           if [[ -n "$MANUAL_HASH" ]]; then
