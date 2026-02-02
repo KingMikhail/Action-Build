@@ -56,7 +56,7 @@ on:
         type: choice
         description: "管理器调用方向"
         required: true
-        default: MIUIX
+        default: MD3_SPOOF
         options:
           - MIUIX
           - MIUIX_SPOOF
@@ -108,7 +108,7 @@ on:
       SUBLEVEL:
         description: "自定义内核等级欺骗(SUBLEVEL)"
         required: false
-        default: ""
+        default: "KingMikhail-Xclusive"
       FAST_BUILD:
         type: boolean
         description: "是否启用极速构建？"
