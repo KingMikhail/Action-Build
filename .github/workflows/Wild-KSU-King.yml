@@ -1,4 +1,4 @@
-name: Build WildKSU-Stable-King
+name: Build Wild-KSU-King
 on:
   workflow_dispatch:
     inputs:
@@ -59,7 +59,11 @@ on:
         default: stable
         options:
           - stable
-          - stable-spoofed
+          - stable-spoof
+          - canary
+          - canary-spoof
+          - beta
+          - beta-spoof
       SUSFS_CI:
         type: choice
         description: "SUSFS module download call direction"
@@ -564,12 +568,28 @@ jobs:
 
           case "$MANAGER_SOURCE" in
             stable)
-              BRANCH="main"
+              BRANCH="stable"
               ARTIFACT="=Manager-released"
               ;;
-            stable-spoof|*)
+            stable-spoof)
               BRANCH="stable"
-              ARTIFACT="Manager-spoofed-released"
+              ARTIFACT="Spoofed-Manager-released"
+              ;;
+            beta)
+              BRANCH="beta"
+              ARTIFACT="Manager-release"
+              ;;
+            beta-spoof)
+              BRANCH="beta"
+              ARTIFACT="Spoofed-Manager-release"
+              ;;
+            canary)
+              BRANCH="canary"
+              ARTIFACT="Manager-release"
+              ;;
+            canary-spoof|*)
+              BRANCH="canary"
+              ARTIFACT="Spoofed-Manager-release"
               ;;
           esac
 
