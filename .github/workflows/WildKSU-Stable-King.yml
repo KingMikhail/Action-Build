@@ -1,4 +1,4 @@
-name: Build WildKSU-King
+name: Build WildKSU-Stable-King
 on:
   workflow_dispatch:
     inputs:
@@ -60,10 +60,6 @@ on:
         options:
           - stable
           - stable-spoofed
-          - beta
-          - beta-spoofed
-          - canary
-          - canary-spoofed
       SUSFS_CI:
         type: choice
         description: "SUSFS module download call direction"
