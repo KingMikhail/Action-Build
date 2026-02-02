@@ -59,9 +59,11 @@ on:
         default: stable
         options:
           - stable
-          - stable-spoof
+          - stable-spoofed
           - beta
+          - beta-spoofed
           - canary
+          - canary-spoofed
       SUSFS_CI:
         type: choice
         description: "SUSFS module download call direction"
@@ -567,19 +569,27 @@ jobs:
           case "$MANAGER_SOURCE" in
             beta)
               BRANCH="beta"
-              ARTIFACT="=Manager-release"
+              ARTIFACT="=manager"
+              ;;
+            beta-spoof)
+              BRANCH="beta"
+              ARTIFACT="=manager-spoofed"
               ;;
             canary)
               BRANCH="canary"
-              ARTIFACT="Manager-release"
+              ARTIFACT="manager"
+              ;;
+            canary-spoof)
+              BRANCH="canary"
+              ARTIFACT="manager-spoofed"
               ;;
             stable)
               BRANCH="main"
-              ARTIFACT="=Manager-release"
+              ARTIFACT="=Manager-released"
               ;;
             stable-spoof|*)
               BRANCH="stable"
-              ARTIFACT="Manager-release"
+              ARTIFACT="Manager-spoofed-released"
               ;;
           esac
 
