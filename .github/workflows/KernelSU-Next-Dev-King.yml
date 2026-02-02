@@ -1,4 +1,4 @@
-name: Build KernelSU-Next-King
+name: Build KernelSU-Next-Dev-King
 on:
   workflow_dispatch:
     inputs:
