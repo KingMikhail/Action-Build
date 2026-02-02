@@ -565,11 +565,11 @@ jobs:
           case "$MANAGER_SOURCE" in
             canary)
               BRANCH="canary"
-              ARTIFACT="Manager-release"
+              ARTIFACT="manager-release"
               ;;
             canary-spoof|*)
               BRANCH="canary"
-              ARTIFACT="Manager-Spoofed-release"
+              ARTIFACT="manager-spoofed-release"
               ;;
           esac
 
