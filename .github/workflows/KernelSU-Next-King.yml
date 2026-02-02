@@ -56,10 +56,10 @@ on:
         type: choice
         description: "Manager calling direction"
         required: true
-        default: OFFICIAL
+        default: dev
         options:
-          - OFFICIAL
-          - SPOOF
+          - dev
+          - dev-spoof
       SUSFS_CI:
         type: choice
         description: "SUSFS module download call direction"
@@ -95,11 +95,11 @@ on:
         default: "Sat Jan 31 11:11:11 UTC 2026"
       SUFFIX:
         type: string
-        description: "Custom kernel suffix (use random string if not specified)"
+        description: "Custom Kernel suffix (Use random string if not specified)"
         required: false
         default: "KingMikhail-Xclusive"
       SUBLEVEL:
-        description: "Custom kernel level spoofing (SUBLEVEL)"
+        description: "Custom kernel level spoofing (Sublevel)"
         required: false
         default: ""
       FAST_BUILD:
