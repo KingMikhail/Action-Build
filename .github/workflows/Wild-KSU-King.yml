@@ -1,4 +1,4 @@
-name: Build Wild-KSU-King
+name: Build WildKSU-Canary-King
 on:
   workflow_dispatch:
     inputs:
@@ -58,12 +58,8 @@ on:
         required: true
         default: canary
         options:
-          - stable
-          - stable-spoof
           - canary
           - canary-spoof
-          - beta
-          - beta-spoof
       SUSFS_CI:
         type: choice
         description: "SUSFS module download call direction"
@@ -567,29 +563,13 @@ jobs:
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
 
           case "$MANAGER_SOURCE" in
-            stable)
-              BRANCH="stable"
-              ARTIFACT="=Manager-released"
-              ;;
-            stable-spoof)
-              BRANCH="stable"
-              ARTIFACT="Spoofed-Manager-released"
-              ;;
-            beta)
-              BRANCH="beta"
-              ARTIFACT="Manager-release"
-              ;;
-            beta-spoof)
-              BRANCH="beta"
-              ARTIFACT="Spoofed-Manager-release"
-              ;;
             canary)
               BRANCH="canary"
               ARTIFACT="Manager-release"
               ;;
             canary-spoof|*)
               BRANCH="canary"
-              ARTIFACT="Spoofed-Manager-release"
+              ARTIFACT="Manager-Spoofed-release"
               ;;
           esac
 
