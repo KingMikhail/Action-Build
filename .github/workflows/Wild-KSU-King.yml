@@ -604,7 +604,7 @@ jobs:
 
           # It must contain two delimiters (At least three fields)
           if [[ "$(grep -o '/' <<< "$KSU_META" | wc -l)" -lt 2 ]]; then
-            echo "Error: The KSU meta parameter is missing the necessary separator '/'.The format should be: branch name/custom identifier(Optional)/Commit hash(Optional)"
+            echo "Error: The KSU meta parameter is missing the necessary separator '/'. The format should be: branch name/custom identifier(Optional)/Commit hash(Optional)"
             exit 10
           fi
 
