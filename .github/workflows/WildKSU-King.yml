@@ -56,12 +56,11 @@ on:
         type: choice
         description: "Manager calling direction"
         required: true
-        default: Stable
+        default: stable
         options:
-          - Stable
-          - Stable Spoof
-          - Beta
-          - Canary
+          - stable
+          - beta
+          - canary
       SUSFS_CI:
         type: choice
         description: "SUSFS module download call direction"
