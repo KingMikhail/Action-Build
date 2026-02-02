@@ -563,11 +563,11 @@ jobs:
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
 
           case "$MANAGER_SOURCE" in
-            SPOOF)
+            dev-spoof)
               BRANCH="dev"
               ARTIFACT="manager-spoofed"
               ;;
-            OFFICIAL|*)
+            dev|*)
               BRANCH="dev"
               ARTIFACT="manager"
               ;;
@@ -580,7 +580,7 @@ jobs:
         run: |
           cd kernel_workspace/kernel_platform
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/refs/heads/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s dev
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/${MANAGER_BRANCH}/kernel/setup.sh" | bash
           cd KernelSU-Next
           KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/commits?sha=${MANAGER_BRANCH}&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 30000)
           echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
@@ -737,7 +737,7 @@ jobs:
             patch -p1 -F 3 < "fengchi_${FILE}.patch"
             echo "fengchi_patch完成"
           else
-            echo "❌ No patch found. The Windspeed kernel does not currently support your device model. Please close and try again"
+            echo "❌ No patch found. The Windspeed Kernel does not currently support your device model, please close and try again"
             exit 12
           fi
 
@@ -745,7 +745,7 @@ jobs:
         if: ${{ github.event.inputs.LSM == 'true' }}
         run: |
           cd kernel_workspace/kernel_platform/common
-          echo "Enabling kernel-level baseband protection support…"
+          echo "Enabling Kernel-level baseband protection support..."
           curl -LSs https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/main/setup.sh | bash -s fix_blkdev_rename
           sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' ./security/Kconfig
 
@@ -860,7 +860,7 @@ jobs:
             echo "Fix potential false alarms from devices after enabling IPV6 NAT…"
             patch -p1 -F 3 < "${PATCH_DIR}/IPv6_NAT_FIX.patch"
           else
-            echo "Your device does not support IPV6 NAT, skip this step"
+            echo "Your device does not support IPV6 NAT, skipping step"
           fi
 
       # Custom kernel build time, without adding #1 SMP PREEMPT
@@ -925,7 +925,7 @@ jobs:
           if [[ -z "$CLANG_PREBUILT_BIN" ]]; then
             echo "⚠️ CLANG_PREBUILT_BIN was not found in build.config.common. Revert to the official build script"
             echo "fallback=true" >> "$GITHUB_OUTPUT"
-            echo "Please consider disabling FAST_BUILD and submit an issue"
+            echo "Please consider disabling fastbuild and submit an issue"
             exit 0
           fi
 
@@ -942,7 +942,7 @@ jobs:
           if [[ -z "$CLANG_VERSION" ]]; then
             echo "⚠️ Unable to obtain the Clang version from CLANG_PREBUILT_BIN or build.config.constants; reverting to the official build script"
             echo "fallback=true" >> "$GITHUB_OUTPUT"
-            echo "Please consider disabling FAST_BUILD and submit an issue"
+            echo "Please consider disabling fastbuild and submit an issue"
             exit 0
           fi
 
@@ -1000,7 +1000,7 @@ jobs:
           else
             image_path=$(find "./kernel_workspace/kernel_platform/out/" -name "Image" | head -n 1)
             if [ -n "$image_path" ]; then
-              echo "The image file was successfully found after compiling using the official script"
+              echo "The image file was successfully found after compiling using the Official script"
             else
               echo "Image file not found, build failed" >&2
               exit 1
@@ -1072,7 +1072,7 @@ jobs:
           artifact_url=$(gh api "repos/KernelSU-Next/KernelSU-Next/actions/runs/$run_id/artifacts" | jq -r ".artifacts[] | select(.name == \"$MANAGER_ARTIFACT\") | .archive_download_url" | head -n1)
 
           if [[ -z "$artifact_url" ]]; then
-            echo "No artifact '$MANAGER_ARTIFACT' found in run $run_id. Skipping download."
+            echo "No artifact '$MANAGER_ARTIFACT' found in run $run_id, skipping download"
             exit 0
           fi
           echo "Downloading from: $artifact_url"
@@ -1108,7 +1108,7 @@ jobs:
               echo "✅ Download link successfully obtained: $download_url"
               wget -N "$download_url" && success=1 && break
             else
-              echo "⚠️ Failed to retrieve download link. Please try again in 3 seconds..."
+              echo "⚠️ Failed to retrieve download link, please try again in 3 seconds..."
               sleep 3
             fi
           done
@@ -1152,7 +1152,7 @@ jobs:
         if: ${{ github.event.inputs.ZRAM == 'true' && steps.zram_find.outputs.upload != 'false' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ZRAM-Module_${{ env.KERNEL_VERSION }}_${{ steps.extract_info.outputs.value }}
+          name: ZRAM-${{ env.KERNEL_VERSION }}-${{ steps.extract_info.outputs.value }}
           path: ZRAM-Module/*
 
       - name: Post-build Disk Check
