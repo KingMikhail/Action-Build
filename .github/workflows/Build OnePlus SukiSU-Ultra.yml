@@ -133,27 +133,27 @@ on:
         type: boolean
         description: "是否添加Unicode不可见字码点绕过读取漏洞修复？"
         required: true
-        default: false
+        default: true
       SCHED:
         type: boolean
         description: "是否添加风驰驱动1.0？"
         required: true
-        default: false
+        default: true
       ZRAM:
         type: boolean
         description: "是否添加更多ZRAM算法？"
         required: true
-        default: false
+        default: true
       XUS_FIX:
         type: boolean
         description: "是否阻止5US报错文件产生？"
         required: true
-        default: false
+        default: true
       SUSFS_DEV:
         type: boolean
         description: "是否拉取SUSFS-DEV分支？"
         required: true
-        default: false
+        default: true
       SPACE_NOCLEAN:
         type: boolean
         description: "是否停用空间清扫？"
