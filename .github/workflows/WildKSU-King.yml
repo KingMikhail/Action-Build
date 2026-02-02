@@ -565,11 +565,11 @@ jobs:
 
           case "$MANAGER_SOURCE" in
             SPOOF)
-              BRANCH="dev"
+              BRANCH="stable"
               ARTIFACT="manager-spoofed"
               ;;
             OFFICIAL|*)
-              BRANCH="dev"
+              BRANCH="stable"
               ARTIFACT="manager"
               ;;
           esac
