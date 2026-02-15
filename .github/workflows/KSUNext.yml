@@ -644,6 +644,10 @@ jobs:
             cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
             cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
             cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+          fi
+          git clone https://github.com/KingMikhail/Action-Build.git
+          cd kernel_platform
+          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
             echo "Fixing Hook Mode"
             cp ../../Action-Build/patches/overwrite_hook_mode.patch ./overwrite_hook_mode.patch
             echo "Adding KSU Toolkit Support"
