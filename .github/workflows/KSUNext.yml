@@ -645,14 +645,6 @@ jobs:
             cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
             cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
           fi
-          git clone https://github.com/KingMikhail/Action-Build.git
-          cd kernel_platform
-          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
-            echo "Fixing Hook Mode"
-            cp ../../Action-Build/patches/overwrite_hook_mode.patch
-            echo "Adding KSU Toolkit Support"
-            cp ../../Action-Build/patches/ksu_toolkit.patch
-          fi
 
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
             echo "正在拉取zram补丁"
@@ -706,6 +698,9 @@ jobs:
             echo "正在打susfs补丁"
             patch -p1 < 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
             echo "susfs_patch完成"
+            echo "Overwrite Hook Mode"
+            cp ../../Action-Build/patches/overwrite_hook_mode.patch ./
+              patch -p1 < overwrite_hook_mode.patch || true
 
             # Revert
             if [ "$fake_patched" = 1 ]; then
