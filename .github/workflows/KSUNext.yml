@@ -649,9 +649,9 @@ jobs:
           cd kernel_platform
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
             echo "Fixing Hook Mode"
-            cp ../../Action-Build/patches/overwrite_hook_mode.patch ./overwrite_hook_mode.patch
+            cp ../../Action-Build/patches/overwrite_hook_mode.patch
             echo "Adding KSU Toolkit Support"
-            cp ../../Action-Build/patches/ksu_toolkit.patch ./ksu_toolkit.patch
+            cp ../../Action-Build/patches/ksu_toolkit.patch
           fi
 
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
