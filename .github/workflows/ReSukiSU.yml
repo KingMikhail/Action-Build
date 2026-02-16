@@ -674,7 +674,9 @@ jobs:
             cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
             cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
             cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+            echo "Applying 69 Hide Stuff Patches"
             patch -p1 < 69_hide_stuff.patch || true
+            echo "69 Hide Stuff Patches Complete"
           fi
 
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
