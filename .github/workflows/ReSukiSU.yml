@@ -630,6 +630,7 @@ jobs:
           [[ -n "$MANUAL_HASH" ]] && echo "Manually specify hash: $MANUAL_HASH" || echo "Manually specify hash: not enabled"
 
           curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$BRANCH_NAME"
+          echo 'CONFIG_KSU_FULL_NAME_FORMAT="$KSU_VERSION-$KSU_CUSTOM_TAG"' >> ./common/arch/arm64/configs/gki_defconfig
           cd ./KernelSU
 
           if [[ -n "$KSU_CUSTOM_TAG" ]]; then
@@ -642,6 +643,7 @@ jobs:
 
           KSU_VERSION=$(expr $(git rev-list --count "$MANAGER_BRANCH" 2>/dev/null || echo 13000) + 30700)
           echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+          echo "kSUVER=$KSU_VERSION" >> $GITHUB_OUTPUT
 
       - name: Apply Patches ReSukiSU
         env:
