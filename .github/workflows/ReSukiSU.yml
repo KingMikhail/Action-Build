@@ -722,16 +722,18 @@ jobs:
               if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then
                 echo "Vma Pages Not Found, Patches Underway..."
                 fake_patched=1
-              else
+              fi
+            if [ "$GKI_V" = "android15-6.6" ]; then
+              if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then 
                 echo "69 Other Hide Stuff Patches Underway..."
                 patch -p1 < 69_hide_stuff.patch || true
                 echo "69 Other Hide Stuff Patches Complete!"
               fi
             fi
 
-            echo "Applying SUSFS patch"
+            echo "Add SUSFS Patches Underway..."
             patch -p1 < 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
-            echo "SUSFS patch complete"
+            echo "SUSFS Patches Complete!"
 
             # Revert
             if [ "$fake_patched" = 1 ]; then
