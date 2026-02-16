@@ -1,4 +1,4 @@
-name: ReSukiSU Drei
+name: ReSukiSU/SukiSU Liquid
 on:
   workflow_dispatch:
     inputs:
@@ -59,10 +59,10 @@ on:
         type: choice
         description: "Manager call direction"
         required: true
-        default: MD3
+        default: ReSukiSU-Main
         options:
-          - MD3
-          - MD3_SPOOF
+          - ReSukiSU-Main
+          - SukiSU-Ultra-Main
       SUSFS_CI:
         type: choice
         description: "SUSFS module download call direction"
@@ -597,11 +597,11 @@ jobs:
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
 
           case "$MANAGER_SOURCE" in
-            MD3_SPOOF)
+            SukiSU-Ultra-Main)
               BRANCH="main"
-              ARTIFACT="Spoofed-Manager-release"
+              ARTIFACT="Manager-release"
               ;;
-            MD3|*)
+            ReSukiSU-Main|*)
               BRANCH="main"
               ARTIFACT="Manager-release"
               ;;
