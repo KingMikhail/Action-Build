@@ -76,7 +76,7 @@ on:
         type: choice
         description: "Kernel module implementation methods"
         required: true
-        default: KPM
+        default: KPN
         options:
           - KPM
           - KPN
@@ -100,7 +100,7 @@ on:
         type: string
         description: "Branch name (required) / Custom version identifier (leave blank and do not modify) / Revert branch commit hash version (leave blank and do not modify)"
         required: false
-        default: "main/ReSukiSU/"
+        default: "main/AndreiGMikhail/"
       ZRAM:
         type: string
         description: "ZRAM (0 for off, 1 for on)/algorithm name/size"
@@ -110,7 +110,7 @@ on:
         type: string
         description: "Custom kernel suffix (use random string if not specified)"
         required: false
-        default: "2-andreimikhail-4k"
+        default: "8-AndreiGMikhail-4k"
       SUBLEVEL:
         description: "Custom kernel level spoofing (SUBLEVEL)"
         required: false
@@ -139,17 +139,17 @@ on:
         type: boolean
         description: "Should we add a fix for the Unicode invisible code point bypass read vulnerability?"
         required: true
-        default: false
+        default: true
       SCHED:
         type: boolean
         description: "Add Windspeed Driver 1.0?"
         required: true
-        default: false
+        default: true
       XUS_FIX:
         type: boolean
         description: "Should we prevent the generation of 5US error files?"
         required: true
-        default: false
+        default: true
       SUSFS_DEV:
         type: boolean
         description: "Should we pull the SUSFS-DEV branch?"
@@ -168,7 +168,7 @@ on:
 
 jobs:
   build:
-    name: ${{ github.event.inputs.FAST_BUILD == 'true' && ' [FAST]' || '' }}${{ endsWith(github.event.inputs.FILE, '_aosp') && ' [AOSP]' || '' }}${{ github.event.inputs.KPM == 'KPM' && ' [KPM]' || github.event.inputs.KPM == 'KPN' && ' [KPN]' || '' }}${{ github.event.inputs.LSM == 'true' && ' [LSM]' || '' }}${{ github.event.inputs.SCHED == 'true' && ' [SCHED]' || '' }}${{ startsWith(github.event.inputs.ZRAM, '1/') && ' [ZRAM]' || '' }}For ${{ github.event.inputs.FILE }} ${{ github.event.inputs.SUFFIX }}
+    name:  Liquid SukiSU/ReSukiSU
     runs-on: ubuntu-latest
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
