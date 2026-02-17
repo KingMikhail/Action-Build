@@ -348,7 +348,6 @@ jobs:
           echo "Selected KPM: ${{ github.event.inputs.KPM }}"
           echo "Custom SUSFS_META: ${{ github.event.inputs.SUSFS_META }}"
           echo "Custom KSU_META: ${{ github.event.inputs.KSU_META }}"
-          echo "Custom KSU_TYPE: ${{ github.event.inputs.KSU_TYPE }}"
           echo "Selected ZRAM: ${{ github.event.inputs.ZRAM }}"
           echo "Custom BUILD_TIME: ${{ github.event.inputs.BUILD_TIME }}"
           echo -n "BUILD_TIME Unicode: "
@@ -631,6 +630,9 @@ jobs:
           echo "manager_branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "manager_artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
+      # ===============
+      # Add Selected Root
+      # ===============
       - name: Add ReSukiSU Manager
         if: ${{ github.event.inputs.KSU_META == 'ReSukiSU' }}
         shell: bash
@@ -639,14 +641,8 @@ jobs:
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
 
-          # Must Contain Two Delimiters at Least Three Fields
-          if [[ "$(grep -o '/' <<< "$KSU_META" | wc -l)" -lt 2 ]]; then
-            echo "Error: The KSU Meta Parameter is Missing Necessary Separator '/'. format should be: branch name/custom identifier (optional)/commit hash (optional)"
-            exit 10
-          fi
-
-          # Parsing fields: Branch / Custom identifier / Manual hash
-          IFS='/' read -r BRANCH_NAME KSU_CUSTOM_TAG MANUAL_HASH <<< "$KSU_META"
+          # Parsing fields: Branch
+          IFS='/' read -r ${BRANCH_NAME} <<< "$KSU_META"
 
           echo "Branch name: $BRANCH_NAME"
           [[ -n "$KSU_CUSTOM_TAG" ]] && echo "Custom version identification: $KSU_CUSTOM_TAG" || echo "Custom version identification: not enabled"
@@ -677,14 +673,8 @@ jobs:
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
 
-          # 必须包含两个分隔符（至少三个字段）
-          if [[ "$(grep -o '/' <<< "$KSU_META" | wc -l)" -lt 2 ]]; then
-            echo "错误: KSU_META 参数缺少必要的分隔符 '/'，格式应为: 分支名/自定义标识(可省略)/提交hash(可省略)"
-            exit 10
-          fi
-
-          # 解析字段：分支 / 自定义标识 / 手动 hash
-          IFS='/' read -r BRANCH_NAME CUSTOM_TAG MANUAL_HASH <<< "$KSU_META"
+          # Parsing fields: Branch
+          IFS='/' read -r ${BRANCH_NAME} <<< "$KSU_META"
 
           echo "分支名: $BRANCH_NAME"
           [[ -n "$CUSTOM_TAG" ]] && echo "自定义版本标识: $CUSTOM_TAG" || echo "自定义版本标识: 未启用"
