@@ -110,7 +110,7 @@ on:
         type: string
         description: "Custom kernel suffix (use random string if not specified)"
         required: false
-        default: "8-AndreiGMikhail-4k"
+        default: "8-andreimikhail-4k"
       SUBLEVEL:
         description: "Custom kernel level spoofing (SUBLEVEL)"
         required: false
