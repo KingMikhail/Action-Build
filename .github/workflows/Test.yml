@@ -356,6 +356,7 @@ jobs:
           echo "Selected KPM: ${{ github.event.inputs.KPM }}"
           echo "Custom SUSFS_META: ${{ github.event.inputs.SUSFS_META }}"
           echo "Custom KSU_META: ${{ github.event.inputs.KSU_META }}"
+          echo "Custom KSU_TYPE: ${{ github.event.inputs.KSU_TYPE }}"
           echo "Selected ZRAM: ${{ github.event.inputs.ZRAM }}"
           echo "Custom BUILD_TIME: ${{ github.event.inputs.BUILD_TIME }}"
           echo -n "BUILD_TIME Unicode: "
@@ -639,9 +640,9 @@ jobs:
           echo "manager_artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
       - name: Add ReSukiSU Manager
+        if: ${{ github.event.inputs.KSU_TYPE == 'ReSukiSU' }}
         run: |
           cd kernel_workspace/kernel_platform
-          if: ${{ github.event.inputs.KSU_TYPE == 'ReSukiSU' }}
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
 
@@ -676,9 +677,9 @@ jobs:
           echo "::endgroup::"
 
       - name: Add SukiSU Ultra
+        if: ${{ github.event.inputs.KSU_TYPE == 'SukiSU-Ultra' }}
         run: |
-          cd kernel_workspace/kernel_platform
-          if: ${{ github.event.inputs.KSU_TYPE == 'SukiSU-Ultra' }}
+          cd kernel_workspace/kernel_platform          
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
 
