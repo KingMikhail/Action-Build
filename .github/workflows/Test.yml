@@ -641,6 +641,7 @@ jobs:
 
       - name: Add ReSukiSU Manager
         if: ${{ github.event.inputs.KSU_TYPE == 'ReSukiSU' }}
+        shell: bash
         run: |
           cd kernel_workspace/kernel_platform
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
@@ -678,6 +679,7 @@ jobs:
 
       - name: Add SukiSU Ultra
         if: ${{ github.event.inputs.KSU_TYPE == 'SukiSU-Ultra' }}
+        shell: bash
         run: |
           cd kernel_workspace/kernel_platform          
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
@@ -1304,17 +1306,18 @@ jobs:
           cp ksu_module_susfs_1.5.2+_Release.zip ./AnyKernel3/
 
       - name: Download Latest Root Manager APK from CI
+        shell: bash   
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          KSU_TYPE="${{ github.event.inputs.KSU_TYPE }}"
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
           MANAGER_ARTIFACT="${{ steps.manager.outputs.manager_artifact }}"
 
           echo "Using Branch: $MANAGER_BRANCH"
           echo "Downloading Artifact: $MANAGER_ARTIFACT"
           
-          KSU_TYPE="${{ github.event.inputs.KSU_TYPE }}"
           run_id=$(gh api "repos/${KSU_TYPE}/${KSU_TYPE}/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
 
           if [[ -z "$run_id" ]]; then
@@ -1339,7 +1342,7 @@ jobs:
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AK3-${{ github.event.inputs.KSU_TYPE }}-${{ env.KSUVER }}-${{ steps.extract_info.outputs.value }}(${{ env.TKERNEL_VERSION }})${{ steps.suffix.outputs.value }}
+          name: AK3-${{ github.event.inputs.KSU_TYPE }}-${{ env.KSUVER }}-${{ github.run_number }}
           path: ./AnyKernel3/*
 
       - name: Extract and Process ZRAM Module
