@@ -1,4 +1,4 @@
-name: Test Liquid
+name: ReSukiSU/SukiSU Liquid
 on:
   workflow_dispatch:
     inputs:
@@ -55,14 +55,6 @@ on:
           - oneplus_15r_aosp
           - oneplus_15
           - oneplus_15_aosp
-      KSU_META:
-        type: choice
-        description: "Manager Call Direction"
-        required: true
-        default: ReSukiSU
-        options:
-          - ReSukiSU
-          - SukiSU-Ultra
       KPM:
         type: choice
         description: "Kernel module implementation methods"
@@ -87,6 +79,14 @@ on:
         description: "Custom build time (type F to use current UTC time)"
         required: false
         default: "Sat Feb 14 07:17:27 UTC 2026"
+      KSU_META:
+        type: choice
+        description: "Branch name (required) / Custom version identifier (leave blank and do not modify) / Revert branch commit hash version (leave blank and do not modify)"
+        required: true
+        default: "main/ReSukiSU/"
+        options:
+         - main/ReSukiSU/
+         - main/SukiSU-Ultra/
       ZRAM:
         type: string
         description: "ZRAM (0 for off, 1 for on)/algorithm name/size"
@@ -224,7 +224,7 @@ jobs:
               README_URL="https://raw.githubusercontent.com/${OWNER}/${REPO_NAME}/${BRANCH}/README.md"
 
               if curl -sf --head "$XML_URL" >/dev/null; then
-                echo "✅ ${OWNER}/${REPO_NAME} Found ${FILE}.xml(Branch: ${BRANCH})"
+                echo "✅ 在 ${OWNER}/${REPO_NAME} 找到 ${FILE}.xml(分支: ${BRANCH})"
                 curl -s -o "$XML_PATH" "$XML_URL"
                 curl -s -o "$README_PATH" "$README_URL" || true
 
@@ -243,7 +243,7 @@ jobs:
             fi
           fi
           if [[ -z "$FOUND_REPO" || ! -s "$XML_PATH" ]]; then
-            echo "❌ Cannot be Found in Any Warehouse ${FILE}.xml"
+            echo "❌ 无法在任何仓库中找到 ${FILE}.xml"
             exit 9
           fi
           echo "MANIFEST_REPO=$FOUND_REPO" >> "$GITHUB_ENV"
@@ -392,9 +392,9 @@ jobs:
               mkdir -p "${{ env.CCACHE_DIR }}"
               ccache -M ${{ env.CCACHE_MAXSIZE }}
               touch "$INIT_FLAG"
-              echo "✅ Ccache Initialization Complete"
+              echo "✅ Ccache initialization complete"
             else
-              echo "✅ Ccache has been Initialized, Skip this Step"
+              echo "✅ Ccache has been initialized, skip this step"
             fi
           else
             echo "❌ Skip if ccache is not installed"
@@ -444,15 +444,16 @@ jobs:
             echo "KANDROID_VERSION=${BRANCH%-*}" >> $GITHUB_ENV
             echo "KERNEL_VERSION=${BRANCH#*-}" >> $GITHUB_ENV
           else
-            echo "No Branch Found in Build Config* and Ack Sha Files"
+            echo "No BRANCH found in build.config* and ACK_SHA files"
           fi
-          # Obtain Full Kernel Version Number (TKERNEL_VERSION) and Optional Kernel Level Modification from Makefile
+
+          # Obtain the full kernel version number (TKERNEL_VERSION) and optional kernel level modification from the Makefile
           ORIG_VERSION=$(awk '/^VERSION =/ {v=$3} /^PATCHLEVEL =/ {p=$3} /^SUBLEVEL =/ {s=$3} END {print v"."p"."s}' ./common/Makefile)
 
           # Force modification of SUBLEVEL (kernel level)
           SUBLEVEL_INPUT="${{ github.event.inputs.SUBLEVEL }}"
           if [ -n "$SUBLEVEL_INPUT" ]; then
-            echo "Modification SUBLEVEL for $SUBLEVEL_INPUT"
+            echo "修改 SUBLEVEL 为 $SUBLEVEL_INPUT"
             sed -i "s/^\(SUBLEVEL[[:space:]]*=[[:space:]]*\).*/\1$SUBLEVEL_INPUT/" ./common/Makefile
           else
             echo "SUBLEVEL is not specified; the default value will be retained"
@@ -590,81 +591,101 @@ jobs:
 
           git add -A
           git commit -m "Random suffix & remove -dirty"
-
-      # ===============
-      # Add Selected Root
-      # ===============
-      - name: Add Selected Root
-        id: manager
+      
+      - name: Add KernelSU Forks
         run: |
           # Go to Kernel Working Directory
           cd kernel_workspace/kernel_platform
           if [[ ${{ github.event.inputs.KSU_META }} == "SukiSU-Ultra" ]]; then
             echo "Configure SukiSU Ultra..."
-            curl -LSs "https://raw.githubusercontent.com/ShirkNeko/SukiSU-Ultra/refs/heads/main/kernel/setup.sh" | bash -s main
+            curl -LSs "https://raw.githubusercontent.com/ShirkNeko/SukiSU-Ultra/refs/heads/main/kernel/setup.sh" | bash -s builtin
             cd ./KernelSU
-            # Get a Short Hash of the Current Git Commit (8-bits)
+            
+            # Get a Short Hash of Current Git Commit (8-bits)
             GIT_COMMIT_HASH=$(git rev-parse --short=8 HEAD)
             echo "Current Commit Hash: $GIT_COMMIT_HASH"
             export KSU_VERSION=$KSU_VERSION
-           
-            # TRY UP TO 3 TIMES TO GET ROOT API VERSION NUMBER
+            
+            # Try up to 3 Times to Get KernelSU API Version Number
             for i in {1..3}; do
-              # EXTRACT KSU API Version FROM REMOTE KBUILD
-              KSU_API_VERSION=$(curl -s "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/Kbuild" | 
-                # LOOK FOR FIRST LINE THAT CONTAINS VERSION DEFINITION
+            
+              # Extract KSU API Version from Remote Kbuild
+              KSU_API_VERSION=$(curl -s "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/builtin/kernel/Kbuild" | 
+              
+                # Look for First Line that Contains Version Definition
                 grep -m1 "KSU_VERSION_API :=" | 
-                # EXTRACT VALUE AFTER EQUAL SIGN
+                
+                # Extract the value after the equal sign
                 awk -F'= ' '{print $2}' | 
-                # REMOVE ALL WHITESPACE
+                
+                # Remove All Whitespace
                 tr -d '[:space:]')
-              # IF VERSION NUMBER IS OBTAINED, LOOP WILL BE EXITED OTHERWISE WAIT FOR 1 SEC AND TRY AGAIN
+                
+              # If the version number is successfully obtained, the loop will be exited, otherwise wait 1 second and try again
               [ -n "$KSU_API_VERSION" ] && break || sleep 1
             done
+            
             # If the Acquisition Fails, Use the Default Version Number 3.1.7
             [ -z "$KSU_API_VERSION"
             [ -z "$KSU_API_VERSION" ] && KSU_API_VERSION="3.1.7"
-            # Store the API Version Number to a GitHub Environment Variable
+            
+            # Store API Version Number to a GitHub Environment Variable
             echo "KSU_API_VERSION=$KSU_API_VERSION" >> $GITHUB_ENV
+            
             # Create Version Definition Template & Version Format Function: Use the Obtained Commit Hash and Fixed Suffix
-            # KSU_VERSION_API: API Version Definition
-            # KSU_VERSION_FULL: Full Version Definition
+       
+            # KSU Version API: API Version Definition
+     
+            # KSU Version Full: Full Version Definition
             VERSION_DEFINITIONS=$'define get_ksu_version_full\nv\\$1-'"$GIT_COMMIT_HASH"$'@Andrei\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_API_VERSION"$'-'"$GIT_COMMIT_HASH"$'Andrei'
-            # Cleanup the Old Version Definitions in the Kernel Kbuild
+           
+            # Cleanup Old Version Definitions in the Kernel Kbuild
+         
             # Delete Version Functions
             sed -i '/define get_ksu_version_full/,/endef/d' kernel/Kbuild
-            # Delete the API Version Definition
+       
+            # Delete API Version Definition
             sed -i '/KSU_VERSION_API :=/d' kernel/Kbuild
-            # Delete the Full Version Definition
+        
+            # Delete Full Version Definition
             sed -i '/KSU_VERSION_FULL :=/d' kernel/Kbuild
+       
             # Insert the New Version Definition After the Repo Owner Line
             awk -v def="$VERSION_DEFINITIONS" '
-              # When the Repo Owner Line is Found, Insert the Version Definition and Set the Markup
+          
+              # When Repo Owner Line is Found, Insert the Version Definition and Set Markup
               /REPO_OWNER :=/ {print; print def; inserted=1; next}
+          
               # Print All Lines
               1
-              # If no Insertion Point is Found, Append it at the End of the Document
+         
+              # If No Insertion Point is Found, Append it at the End of the Document
               END {if (!inserted) print def}
             ' kernel/Kbuild > kernel/Kbuild.tmp && mv kernel/Kbuild.tmp kernel/Kbuild
-            # Generate a Custom Version Number (Based on the Commit Count) to Use when it Fails 114514
+
+            # Generate Custom Version Number (Based on Commit Count) to Use when it Fails 114514
             KSU_VERSION=$(expr $(git rev-list --count main) + 37185 2>/dev/null || echo 114514)
+      
             # Store the Version Number to a GitHub Environment Variable
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-            echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT
+            echo "KSUVER=$KSU_VERSION" >> $GITHUB_OUTPUT
+
             # Validate the Results of the Modifications
             grep -A10 "REPO_OWNER" kernel/Kbuild  # Check the Contents After the Insertion Point
             grep "KSU_VERSION_FULL" kernel/Kbuild # Confirm that the Version Definition Exists
             echo "SukiSU-Ultra Version Number: v${KSU_API_VERSION}-${GIT_COMMIT_HASH}@Andrei"
-          elif [[ ${{ github.event.inputs.MANAGER_SOURCE }} == "ReSukiSU" ]]; then
+          elif [[ ${{ github.event.inputs.KSU_META }} == "ReSukiSU-Main" ]]; then
             echo "Configure ReSukiSU..."
             curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/refs/heads/main/kernel/setup.sh" | bash -s main
-            echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%"' >> ./common/arch/arm64/configs/gki_defconfig
+            echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-%COMMIT_SHA%@Andrei"' >> ./common/arch/arm64/configs/gki_defconfig
             cd ./KernelSU
+           
             # Generate a Custom Version Number (Based on the Commit Count) to Use when it Fails 114514
             KSU_VERSION=$(expr $(git rev-list --count main) + 30700 2>/dev/null || echo 114514)
+        
             # Store the Version Number to a GitHub Environment Variable
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-            echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT
+            echo "KSUVER=$KSU_VERSION" >> $GITHUB_OUTPUT
           elif [[ ${{ github.event.inputs.KSU_META }} == "ksunext" ]]; then
             echo "Configure KernelSU Next..."
             curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
@@ -686,7 +707,7 @@ jobs:
             cd ./KernelSU
             KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/5ec1cff/KernelSU/commits?sha=main&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 30000)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-            echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT
+            echo "KSUVER=$KSU_VERSION" >> $GITHUB_OUTPUT
             sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" kernel/Kbuild
           elif [[ ${{ github.event.inputs.KSU_META }} == "ksu" ]]; then
             echo "Configure KernelSU (tiann/KernelSU)..."
@@ -694,44 +715,13 @@ jobs:
             cd ./KernelSU
             KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/tiann/KernelSU/commits?sha=main&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 30000)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-            echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT
+            echo "KSUVER=$KSU_VERSION" >> $GITHUB_OUTPUT
             sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" kernel/Kbuild
           else
             echo "No Built-in KernelSU Mode has been Selected to Skip KernelSU Configuration..."
           fi
-      
-            # KSU_VERSION_FULL: Full Version Definition
-            VERSION_DEFINITIONS=$'define get_ksu_version_full\nv\\$1-'"$GIT_COMMIT_HASH"$'@Andrei\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_API_VERSION"$'-'"$GIT_COMMIT_HASH"$'Andrei'
-            # Cleanup the Old Version Definitions in the Kernel Kbuild
-            # Delete Version Functions
-            sed -i '/define get_ksu_version_full/,/endef/d' kernel/Kbuild
-            # Delete the API Version Definition
-            sed -i '/KSU_VERSION_API :=/d' kernel/Kbuild
-            # Delete the Full Version Definition
-            sed -i '/KSU_VERSION_FULL :=/d' kernel/Kbuild
-            # Insert the New Version Definition After the Repo Owner Line
-            awk -v def="$VERSION_DEFINITIONS" '
-              # When the Repo Owner Line is Found, Insert the Version Definition and Set the Markup
-              /REPO_OWNER :=/ {print; print def; inserted=1; next}
-              # Print All Lines
-              1
-              # If no Insertion Point is Found, Append it at the End of the Document
-              END {if (!inserted) print def}
-            ' kernel/Kbuild > kernel/Kbuild.tmp && mv kernel/Kbuild.tmp kernel/Kbuild
 
-            # Generate Custom Version Number (Based on the Commit Count) to Use when it Fails 114514
-            KSU_VERSION=$(expr $(git rev-list --count main) + 37185 2>/dev/null || echo 114514)
-            # Store the Version Number to a GitHub Environment Variable
-            echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-            echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT
-
-            # Validate Results of Modifications
-            grep -A10 "REPO_OWNER" kernel/Kbuild  # Check the Contents After the Insertion Point
-            grep "KSU_VERSION_FULL" kernel/Kbuild # Confirm that the Version Definition Exists
-            echo "SukiSU-Ultra Version Number: v${KSU_API_VERSION}-${GIT_COMMIT_HASH}@Andrei"
-            echo "::endgroup::"
-
-      - name: Apply Patches 
+      - name: Apply Patches ReSukiSU
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
@@ -846,14 +836,14 @@ jobs:
           cd kernel_workspace/kernel_platform/common
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
             [ -d "$p" ] && {
-              echo "The code for Fengchi Already Exists in the Source Code; Enable Secondary Rollback"
+              echo "The code for fengchi already exists in the source code; enable secondary rollback"
               exit 0
             }
           done
           sed -i '1iobj-y += hmbird_patch.o' drivers/Makefile
-          echo "Applying OGKI to GKI Conversion Patch"
+          echo "Applying OGKI to GKI conversion patch"
           patch -p1 -F 3 < "${PATCH_DIR}/hmbird_patch.patch" || true
-          echo "OGKI to GKI Patch Conversion Complete"
+          echo "OGKI to GKI patch conversion complete"
 
       - name: Apply UNICODE BYPASS
         if: ${{ github.event.inputs.UNICODE_BYPASS == 'true' }}
@@ -871,7 +861,7 @@ jobs:
         run: |
           ZRAM="${{ github.event.inputs.ZRAM }}"
           if [[ "$(grep -o '/' <<< "$ZRAM" | wc -l)" -lt 2 ]]; then
-            echo "Error: ZRAM Parameter is Missing the Necessary Separator '/'. The Format should be: Main Switch 0 Off 1 On / Algorithm Name (0 at the Beginning is Invalid) / size (0 at the Beginning is Invalid)"
+            echo "Error: The ZRAM parameter is missing the necessary separator '/'. The format should be: main switch 0 off 1 on / algorithm name (0 at the beginning is invalid) / size (0 at the beginning is invalid)"
             exit 10
           fi
           # Parsing fields: Switch status / Algorithm name / Size
@@ -882,12 +872,12 @@ jobs:
 
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/other/zram/zram_patch/${{ env.KERNEL_VERSION }}"
           cd kernel_workspace/kernel_platform/common
-          echo "LZ4KD Patches is being Applied"
+          echo "Patch LZ4KD is being applied"
           patch -p1 -F 3 < "${PATCH_DIR}/lz4kd.patch" || true
-          echo 'LZ4KD Patches Complete'
-          echo "LZ4K OPlus Patches is being Applied"
+          echo 'LZ4KD patch complete'
+          echo "Patch LZ4K OPlus is being applied"
           patch -p1 -F 3 < "${PATCH_DIR}/lz4k_oplus.patch" || true
-          echo 'LZ4K OPlus Patches Complete'
+          echo 'LZ4K OPlus patch complete'
 
       - name: Apply SCHED
         env:
@@ -897,20 +887,20 @@ jobs:
           cd kernel_workspace/kernel_platform/common
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
             [ -d "$p" ] && {
-              echo "Code for Fengchi already exists in the source code; enable secondary rollback"
+              echo "The code for Fengchi already exists in the source code; enable secondary rollback"
               exit 0
             }
           done
           git clone https://github.com/KingMikhail/Kernel-Hmbird-Patch.git -b $CPU || { echo "❌ The CPU branch does not exist, fengchi kernel does not currently support your model, please close and try again"; exit 11; }
-          echo "Pulling Windspeed Patches"
+          echo "Pulling the windspeed patch"
           cp ./Kernel-Hmbird-Patch/fengchi_${FILE}.patch ./
           if [[ -f "fengchi_${FILE}.patch" ]]; then
-            echo "Applying Windspeed Patches"
+            echo "Applying the windspeed patch"
             dos2unix "fengchi_${FILE}.patch"
             patch -p1 -F 3 < "fengchi_${FILE}.patch"
-            echo "Windspeed Patches Complete"
+            echo "Windspeed patch complete"
           else
-            echo "❌ No Patch Found, Windspeed Kernel does not Currently Support your Device Model, Close and Try Again"
+            echo "❌ No patch found, windspeed kernel does not currently support your device model, please close and try again"
             exit 12
           fi
 
@@ -922,7 +912,7 @@ jobs:
           curl -LSs https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/fix_blkdev_rename/setup.sh | bash -s fix_blkdev_rename
           sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' ./security/Kconfig
 
-      # Configuration Information, Marked with * Indicates Additional items, which carry a certain degree of risk and uncertainty
+      # Configuration information, marked with * indicates additional items, which carry a certain degree of risk and uncertainty
       - name: Add Configuration Settings
         run: |
           cd kernel_workspace/kernel_platform/common
@@ -994,7 +984,7 @@ jobs:
             echo "CONFIG_BBG=y" >> "$CONFIG_FILE"
           fi
 
-          # IPSET and IPv6 NAT Configuration*
+          # IPSET & IPv6 NAT Configuration*
           if [[ "${CPU}" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
             if [[ "$KERNEL_VERSION" != "6.12" ]]; then
               echo "CONFIG_BPF_STREAM_PARSER=y" >> "$CONFIG_FILE"
@@ -1023,7 +1013,7 @@ jobs:
             echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> "$CONFIG_FILE"
           fi
 
-          # Fix Build Issues
+          # Fix build issues
           if [ "$KERNEL_VERSION" = "6.1" ] && [[ "$CPU" == mt* ]]; then
             echo "CONFIG_DEBUG_INFO_BTF=n" >> "$CONFIG_FILE"
           fi
@@ -1032,10 +1022,10 @@ jobs:
             echo "CONFIG_ANDROID_BINDER_IPC_RUST=m" >> "$CONFIG_FILE"
           fi
 
-          # Remove Build Review
+          # Remove build review
           sed -i 's/check_defconfig//' ./build.config.gki
 
-      - name: Fix IPv6 NAT Error
+      - name: Fix IPv6_NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
@@ -1047,7 +1037,7 @@ jobs:
             echo "Your device does not support IPv6 NAT, skip this step"
           fi
 
-      # Custom Kernel Build Time, without adding #1 SMP PREEMPT
+      # Custom kernel build time, without adding #1 SMP PREEMPT
       - name: Custom BUILD_TIME
         shell: bash
         run: |
@@ -1258,7 +1248,7 @@ jobs:
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AK3-${{ github.event.inputs.KSU_META }}-${{ env.KSUVER }}-${{ github.run_number }}
+          name: AK3-ReSukiSU-${{ env.KSUVER }}-${{ steps.extract_info.outputs.value }}(${{ env.TKERNEL_VERSION }})${{ steps.suffix.outputs.value }}
           path: ./AnyKernel3/*
 
       - name: Extract and Process ZRAM Module
