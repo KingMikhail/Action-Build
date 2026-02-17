@@ -1,4 +1,4 @@
-name: ReSukiSU Liquid
+name: Test Liquid
 on:
   workflow_dispatch:
     inputs:
@@ -55,9 +55,17 @@ on:
           - oneplus_15r_aosp
           - oneplus_15
           - oneplus_15_aosp
+      KSU_TYPE:
+        type: choice
+        description: "KernelSU Manager and Forks"
+        required: true
+        default: ReSukiSU
+        options:
+          - ReSukiSU
+          - SukiSU-Ultra
       MANAGER_SOURCE:
         type: choice
-        description: "Manager call direction"
+        description: "Manager Call Direction"
         required: true
         default: ReSukiSU
         options:
@@ -464,10 +472,9 @@ jobs:
             echo "KANDROID_VERSION=${BRANCH%-*}" >> $GITHUB_ENV
             echo "KERNEL_VERSION=${BRANCH#*-}" >> $GITHUB_ENV
           else
-            echo "No BRANCH found in build.config* and ACK_SHA files"
+            echo "No Branch Found in Build Config* and Ack Sha Files"
           fi
-
-          # Obtain the full kernel version number (TKERNEL_VERSION) and optional kernel level modification from the Makefile
+          # Obtain Full Kernel Version Number (TKERNEL_VERSION) and Optional Kernel Level Modification from Makefile
           ORIG_VERSION=$(awk '/^VERSION =/ {v=$3} /^PATCHLEVEL =/ {p=$3} /^SUBLEVEL =/ {s=$3} END {print v"."p"."s}' ./common/Makefile)
 
           # Force modification of SUBLEVEL (kernel level)
@@ -512,7 +519,7 @@ jobs:
             echo "ENABLE_RUST=false" >> $GITHUB_ENV
           fi
 
-      # Custom kernel suffix
+      # Custom Kernel Suffix
       - name: Custom Kernel Suffix if set
         if: ${{ github.event.inputs.SUFFIX != '' }}
         run: |
@@ -631,15 +638,16 @@ jobs:
           echo "manager_branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "manager_artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
-      - name: Add ReSukiSU/SukiSU
+      - name: Add ReSukiSU Manager
         run: |
           cd kernel_workspace/kernel_platform
+          if: ${{ github.event.inputs.KSU_TYPE == "ReSukiSU" }}
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
 
-          # It must contain two delimiters (at least three fields)
+          # Must Contain Two Delimiters at Least Three Fields
           if [[ "$(grep -o '/' <<< "$KSU_META" | wc -l)" -lt 2 ]]; then
-            echo "Error: The KSU meta parameter is missing the necessary separator '/'. format should be: branch name/custom identifier (optional)/commit hash (optional)"
+            echo "Error: The KSU Meta Parameter is Missing Necessary Separator '/'. format should be: branch name/custom identifier (optional)/commit hash (optional)"
             exit 10
           fi
 
@@ -665,8 +673,90 @@ jobs:
           KSU_VERSION=$(expr $(git rev-list --count "$MANAGER_BRANCH" 2>/dev/null || echo 13000) + 30700)
           echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
           echo "kSUVER=$KSU_VERSION" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
 
-      - name: Apply Patches ReSukiSU/SukiSU
+      - name: Add SukiSU Ultra
+        run: |
+          cd kernel_workspace/kernel_platform
+          if: ${{ github.event.inputs.KSU_TYPE == "SukiSU-Ultra" }}
+          MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
+          KSU_META="${{ github.event.inputs.KSU_META }}"
+
+          # 必须包含两个分隔符（至少三个字段）
+          if [[ "$(grep -o '/' <<< "$KSU_META" | wc -l)" -lt 2 ]]; then
+            echo "错误: KSU_META 参数缺少必要的分隔符 '/'，格式应为: 分支名/自定义标识(可省略)/提交hash(可省略)"
+            exit 10
+          fi
+
+          # 解析字段：分支 / 自定义标识 / 手动 hash
+          IFS='/' read -r BRANCH_NAME CUSTOM_TAG MANUAL_HASH <<< "$KSU_META"
+
+          echo "分支名: $BRANCH_NAME"
+          [[ -n "$CUSTOM_TAG" ]] && echo "自定义版本标识: $CUSTOM_TAG" || echo "自定义版本标识: 未启用"
+          [[ -n "$MANUAL_HASH" ]] && echo "手动指定 hash: $MANUAL_HASH" || echo "手动指定 hash: 未启用"
+
+          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$BRANCH_NAME"
+          cd ./KernelSU
+
+          # 如果指定了手动 hash，就切换到该提交
+          if [[ -n "$MANUAL_HASH" ]]; then
+            git fetch origin "$BRANCH_NAME" --depth=50
+            git checkout "$MANUAL_HASH"
+            SHORT_HASH=${MANUAL_HASH:0:8}
+          fi
+
+          KSU_API_VERSION=$(curl -fsSL "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/$BRANCH_NAME/kernel/Kbuild" | \
+            grep -m1 "KSU_VERSION_API :=" | awk -F'= ' '{print $2}' | tr -d '[:space:]')
+          if [[ -z "$KSU_API_VERSION" || "$(printf '%s\n' "$KSU_API_VERSION" "3.1.7" | sort -V | head -n1)" != "3.1.7" ]]; then
+            KSU_API_VERSION="3.1.7"
+          fi
+          echo "KSU_API_VERSION=$KSU_API_VERSION" >> $GITHUB_ENV
+
+          GIT_HASH=$(git rev-parse --short HEAD)
+          echo "GIT_HASH=$GIT_HASH"
+
+          # 组装版本号
+          if [[ -n "$MANUAL_HASH" ]]; then
+            USE_HASH="$SHORT_HASH"
+          else
+            USE_HASH="$GIT_HASH"
+          fi
+          if [[ -z "$CUSTOM_TAG" ]]; then
+            VERSION_FULL="v$KSU_API_VERSION-$USE_HASH@$BRANCH_NAME"
+          else
+            VERSION_FULL="v$KSU_API_VERSION-$CUSTOM_TAG"
+          fi
+
+          # 清理并写入 Kbuild 版本信息
+          sed -i '/define get_ksu_version_full/,/endef/d' kernel/Kbuild
+          sed -i '/KSU_VERSION_API :=/d' kernel/Kbuild
+          sed -i '/KSU_VERSION_FULL :=/d' kernel/Kbuild
+
+          VERSION_DEFINITIONS=$(cat <<EOF
+            define get_ksu_version_full
+            $VERSION_FULL
+            endef
+
+            KSU_VERSION_API := $KSU_API_VERSION
+            KSU_VERSION_FULL := $VERSION_FULL
+          EOF
+          )
+
+          awk -v def="$VERSION_DEFINITIONS" '
+            /REPO_OWNER :=/ {print; print def; inserted=1; next}
+            1
+            END {if (!inserted) print def}
+          ' kernel/Kbuild > kernel/Kbuild.tmp && mv kernel/Kbuild.tmp kernel/Kbuild
+
+          KSU_VERSION=$(expr $(git rev-list --count "$MANAGER_BRANCH" 2>/dev/null || echo 13000) + 37185)
+          echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+
+          echo "::group::最终 Kbuild 中版本信息及部分调试结果预览"
+          grep -A10 "REPO_OWNER" kernel/Kbuild
+          grep "KSU_VERSION_FULL" kernel/Kbuild
+          echo "::endgroup::"
+
+      - name: Apply Patches 
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
@@ -1220,16 +1310,16 @@ jobs:
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
           MANAGER_ARTIFACT="${{ steps.manager.outputs.manager_artifact }}"
 
-          echo "Using branch: $MANAGER_BRANCH"
-          echo "Downloading artifact: $MANAGER_ARTIFACT"
+          echo "Using Branch: $MANAGER_BRANCH"
+          echo "Downloading Artifact: $MANAGER_ARTIFACT"
 
-          run_id=$(gh api "repos/ReSukiSU/ReSukiSU/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
+          run_id=$(gh api "repos/${KSU_TYPE}/${KSU_TYPE}/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
 
           if [[ -z "$run_id" ]]; then
             echo "No successful workflow run found on branch $MANAGER_BRANCH. Skipping download."
             exit 0
           fi
-          artifact_url=$(gh api "repos/ReSukiSU/ReSukiSU/actions/runs/$run_id/artifacts" | jq -r ".artifacts[] | select(.name == \"$MANAGER_ARTIFACT\") | .archive_download_url" | head -n1)
+          artifact_url=$(gh api "repos/${KSU_TYPE}/${KSU_TYPE}/actions/runs/$run_id/artifacts" | jq -r ".artifacts[] | select(.name == \"$MANAGER_ARTIFACT\") | .archive_download_url" | head -n1)
 
           if [[ -z "$artifact_url" ]]; then
             echo "No artifact '$MANAGER_ARTIFACT' found in run $run_id. Skipping download."
@@ -1247,7 +1337,7 @@ jobs:
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AK3-${MANAGER_SOURCE}-${{ env.KSUVER }}-${{ steps.extract_info.outputs.value }}(${{ env.TKERNEL_VERSION }})${{ steps.suffix.outputs.value }}
+          name: AK3-${KSU_TYPE}-${{ env.KSUVER }}-${{ steps.extract_info.outputs.value }}(${{ env.TKERNEL_VERSION }})${{ steps.suffix.outputs.value }}
           path: ./AnyKernel3/*
 
       - name: Extract and Process ZRAM Module
