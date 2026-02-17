@@ -641,7 +641,7 @@ jobs:
       - name: Add ReSukiSU Manager
         run: |
           cd kernel_workspace/kernel_platform
-          if: ${{ github.event.inputs.KSU_TYPE == "ReSukiSU" }}
+          if: ${{ github.event.inputs.KSU_TYPE == 'ReSukiSU' }}
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
 
@@ -678,7 +678,7 @@ jobs:
       - name: Add SukiSU Ultra
         run: |
           cd kernel_workspace/kernel_platform
-          if: ${{ github.event.inputs.KSU_TYPE == "SukiSU-Ultra" }}
+          if: ${{ github.event.inputs.KSU_TYPE == 'SukiSU-Ultra' }}
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
 
