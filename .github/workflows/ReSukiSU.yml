@@ -97,10 +97,13 @@ on:
         required: false
         default: "Sat Feb 14 07:17:27 UTC 2026"
       KSU_META:
-        type: string
+        type: choice
         description: "Branch name (required) / Custom version identifier (leave blank and do not modify) / Revert branch commit hash version (leave blank and do not modify)"
-        required: false
+        required: true
         default: "main/ReSukiSU/"
+        options:
+         - main/ReSukiSU/
+         - main/SukiSU-Ultra/
       ZRAM:
         type: string
         description: "ZRAM (0 for off, 1 for on)/algorithm name/size"
