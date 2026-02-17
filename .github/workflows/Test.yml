@@ -55,14 +55,6 @@ on:
           - oneplus_15r_aosp
           - oneplus_15
           - oneplus_15_aosp
-      KSU_TYPE:
-        type: choice
-        description: "KernelSU Manager and Forks"
-        required: true
-        default: ReSukiSU
-        options:
-          - ReSukiSU
-          - SukiSU-Ultra
       MANAGER_SOURCE:
         type: choice
         description: "Manager Call Direction"
@@ -108,10 +100,10 @@ on:
         type: choice
         description: "Branch name (required) / Custom version identifier (leave blank and do not modify) / Revert branch commit hash version (leave blank and do not modify)"
         required: false
-        default: "main/ReSukiSU/"
+        default: "ReSukiSU"
         options:
-          - main/ReSukiSU/
-          - main/SukiSU-Ultra
+          - ReSukiSU
+          - SukiSU-Ultra
           - None
       ZRAM:
         type: string
@@ -640,7 +632,7 @@ jobs:
           echo "manager_artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
       - name: Add ReSukiSU Manager
-        if: ${{ github.event.inputs.KSU_TYPE == 'ReSukiSU' }}
+        if: ${{ github.event.inputs.KSU_META == 'ReSukiSU' }}
         shell: bash
         run: |
           cd kernel_workspace/kernel_platform
@@ -678,7 +670,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Add SukiSU Ultra
-        if: ${{ github.event.inputs.KSU_TYPE == 'SukiSU-Ultra' }}
+        if: ${{ github.event.inputs.KSU_META == 'SukiSU-Ultra' }}
         shell: bash
         run: |
           cd kernel_workspace/kernel_platform          
@@ -1311,20 +1303,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          KSU_TYPE="${{ github.event.inputs.KSU_TYPE }}"
+          KSU_META="${{ github.event.inputs.KSU_META }}"
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
           MANAGER_ARTIFACT="${{ steps.manager.outputs.manager_artifact }}"
 
           echo "Using Branch: $MANAGER_BRANCH"
           echo "Downloading Artifact: $MANAGER_ARTIFACT"
           
-          run_id=$(gh api "repos/${KSU_TYPE}/${KSU_TYPE}/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
+          run_id=$(gh api "repos/${KSU_META}/${KSU_META}/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
 
           if [[ -z "$run_id" ]]; then
             echo "No successful workflow run found on branch $MANAGER_BRANCH. Skipping download."
             exit 0
           fi
-          artifact_url=$(gh api "repos/${KSU_TYPE}/${KSU_TYPE}/actions/runs/$run_id/artifacts" | jq -r ".artifacts[] | select(.name == \"$MANAGER_ARTIFACT\") | .archive_download_url" | head -n1)
+          artifact_url=$(gh api "repos/${KSU_META}/${KSU_META}/actions/runs/$run_id/artifacts" | jq -r ".artifacts[] | select(.name == \"$MANAGER_ARTIFACT\") | .archive_download_url" | head -n1)
 
           if [[ -z "$artifact_url" ]]; then
             echo "No artifact '$MANAGER_ARTIFACT' found in run $run_id. Skipping download."
@@ -1342,7 +1334,7 @@ jobs:
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AK3-${{ github.event.inputs.KSU_TYPE }}-${{ env.KSUVER }}-${{ github.run_number }}
+          name: AK3-${{ github.event.inputs.KSU_META }}-${{ env.KSUVER }}-${{ github.run_number }}
           path: ./AnyKernel3/*
 
       - name: Extract and Process ZRAM Module
