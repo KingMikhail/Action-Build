@@ -100,7 +100,10 @@ on:
         type: string
         description: "Branch name (required) / Custom version identifier (leave blank and do not modify) / Revert branch commit hash version (leave blank and do not modify)"
         required: false
-        default: "main/AndreiGMikhail/"
+        default: "main/ReSukiSU/"
+        options:
+         - main/ReSukiSU/
+         - main/SukiSU-Ultra
       ZRAM:
         type: string
         description: "ZRAM (0 for off, 1 for on)/algorithm name/size"
