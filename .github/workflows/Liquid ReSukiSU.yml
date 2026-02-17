@@ -59,10 +59,10 @@ on:
         type: choice
         description: "Manager call direction"
         required: true
-        default: ReSukiSU-Main
+        default: ReSukiSU
         options:
-          - ReSukiSU-Main
-          - SukiSU-Ultra-Main
+          - ReSukiSU
+          - SukiSU-Ultra
       SUSFS_CI:
         type: choice
         description: "SUSFS module download call direction"
@@ -97,10 +97,14 @@ on:
         required: false
         default: "Sat Feb 14 07:17:27 UTC 2026"
       KSU_META:
-        type: string
+        type: choice
         description: "Branch name (required) / Custom version identifier (leave blank and do not modify) / Revert branch commit hash version (leave blank and do not modify)"
         required: false
         default: "main/ReSukiSU/"
+        options:
+          - main/ReSukiSU/
+          - main/SukiSU-Ultra
+          - None
       ZRAM:
         type: string
         description: "ZRAM (0 for off, 1 for on)/algorithm name/size"
@@ -238,7 +242,7 @@ jobs:
               README_URL="https://raw.githubusercontent.com/${OWNER}/${REPO_NAME}/${BRANCH}/README.md"
 
               if curl -sf --head "$XML_URL" >/dev/null; then
-                echo "✅ 在 ${OWNER}/${REPO_NAME} 找到 ${FILE}.xml(分支: ${BRANCH})"
+                echo "✅ ${OWNER}/${REPO_NAME} Found ${FILE}.xml(Branch: ${BRANCH})"
                 curl -s -o "$XML_PATH" "$XML_URL"
                 curl -s -o "$README_PATH" "$README_URL" || true
 
@@ -257,7 +261,7 @@ jobs:
             fi
           fi
           if [[ -z "$FOUND_REPO" || ! -s "$XML_PATH" ]]; then
-            echo "❌ 无法在任何仓库中找到 ${FILE}.xml"
+            echo "❌ Cannot be Found in Any Warehouse ${FILE}.xml"
             exit 9
           fi
           echo "MANIFEST_REPO=$FOUND_REPO" >> "$GITHUB_ENV"
@@ -408,9 +412,9 @@ jobs:
               mkdir -p "${{ env.CCACHE_DIR }}"
               ccache -M ${{ env.CCACHE_MAXSIZE }}
               touch "$INIT_FLAG"
-              echo "✅ Ccache initialization complete"
+              echo "✅ Ccache Initialization Complete"
             else
-              echo "✅ Ccache has been initialized, skip this step"
+              echo "✅ Ccache has been Initialized, Skip this Step"
             fi
           else
             echo "❌ Skip if ccache is not installed"
@@ -469,7 +473,7 @@ jobs:
           # Force modification of SUBLEVEL (kernel level)
           SUBLEVEL_INPUT="${{ github.event.inputs.SUBLEVEL }}"
           if [ -n "$SUBLEVEL_INPUT" ]; then
-            echo "修改 SUBLEVEL 为 $SUBLEVEL_INPUT"
+            echo "Modification SUBLEVEL for $SUBLEVEL_INPUT"
             sed -i "s/^\(SUBLEVEL[[:space:]]*=[[:space:]]*\).*/\1$SUBLEVEL_INPUT/" ./common/Makefile
           else
             echo "SUBLEVEL is not specified; the default value will be retained"
@@ -614,11 +618,11 @@ jobs:
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
 
           case "$MANAGER_SOURCE" in
-            SukiSU-Ultra-Main)
+            SukiSU-Ultra)
               BRANCH="main"
-              ARTIFACT="Manager-release"
+              ARTIFACT="Manager"
               ;;
-            ReSukiSU-Main|*)
+            ReSukiSU|*)
               BRANCH="main"
               ARTIFACT="Manager-release"
               ;;
@@ -627,7 +631,7 @@ jobs:
           echo "manager_branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "manager_artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
-      - name: Add ReSukiSU
+      - name: Add ReSukiSU/SukiSU
         run: |
           cd kernel_workspace/kernel_platform
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
@@ -662,7 +666,7 @@ jobs:
           echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
           echo "kSUVER=$KSU_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Apply Patches ReSukiSU
+      - name: Apply Patches ReSukiSU/SukiSU
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
@@ -777,14 +781,14 @@ jobs:
           cd kernel_workspace/kernel_platform/common
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
             [ -d "$p" ] && {
-              echo "The code for fengchi already exists in the source code; enable secondary rollback"
+              echo "The code for Fengchi Already Exists in the Source Code; Enable Secondary Rollback"
               exit 0
             }
           done
           sed -i '1iobj-y += hmbird_patch.o' drivers/Makefile
-          echo "Applying OGKI to GKI conversion patch"
+          echo "Applying OGKI to GKI Conversion Patch"
           patch -p1 -F 3 < "${PATCH_DIR}/hmbird_patch.patch" || true
-          echo "OGKI to GKI patch conversion complete"
+          echo "OGKI to GKI Patch Conversion Complete"
 
       - name: Apply UNICODE BYPASS
         if: ${{ github.event.inputs.UNICODE_BYPASS == 'true' }}
@@ -802,7 +806,7 @@ jobs:
         run: |
           ZRAM="${{ github.event.inputs.ZRAM }}"
           if [[ "$(grep -o '/' <<< "$ZRAM" | wc -l)" -lt 2 ]]; then
-            echo "Error: The ZRAM parameter is missing the necessary separator '/'. The format should be: main switch 0 off 1 on / algorithm name (0 at the beginning is invalid) / size (0 at the beginning is invalid)"
+            echo "Error: ZRAM Parameter is Missing the Necessary Separator '/'. The Format should be: Main Switch 0 Off 1 On / Algorithm Name (0 at the Beginning is Invalid) / size (0 at the Beginning is Invalid)"
             exit 10
           fi
           # Parsing fields: Switch status / Algorithm name / Size
@@ -813,12 +817,12 @@ jobs:
 
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/other/zram/zram_patch/${{ env.KERNEL_VERSION }}"
           cd kernel_workspace/kernel_platform/common
-          echo "Patch LZ4KD is being applied"
+          echo "LZ4KD Patches is being Applied"
           patch -p1 -F 3 < "${PATCH_DIR}/lz4kd.patch" || true
-          echo 'LZ4KD patch complete'
-          echo "Patch LZ4K OPlus is being applied"
+          echo 'LZ4KD Patches Complete'
+          echo "LZ4K OPlus Patches is being Applied"
           patch -p1 -F 3 < "${PATCH_DIR}/lz4k_oplus.patch" || true
-          echo 'LZ4K OPlus patch complete'
+          echo 'LZ4K OPlus Patches Complete'
 
       - name: Apply SCHED
         env:
@@ -828,20 +832,20 @@ jobs:
           cd kernel_workspace/kernel_platform/common
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
             [ -d "$p" ] && {
-              echo "The code for Fengchi already exists in the source code; enable secondary rollback"
+              echo "Code for Fengchi already exists in the source code; enable secondary rollback"
               exit 0
             }
           done
           git clone https://github.com/KingMikhail/Kernel-Hmbird-Patch.git -b $CPU || { echo "❌ The CPU branch does not exist, fengchi kernel does not currently support your model, please close and try again"; exit 11; }
-          echo "Pulling the windspeed patch"
+          echo "Pulling Windspeed Patches"
           cp ./Kernel-Hmbird-Patch/fengchi_${FILE}.patch ./
           if [[ -f "fengchi_${FILE}.patch" ]]; then
-            echo "Applying the windspeed patch"
+            echo "Applying Windspeed Patches"
             dos2unix "fengchi_${FILE}.patch"
             patch -p1 -F 3 < "fengchi_${FILE}.patch"
-            echo "Windspeed patch complete"
+            echo "Windspeed Patches Complete"
           else
-            echo "❌ No patch found, windspeed kernel does not currently support your device model, please close and try again"
+            echo "❌ No Patch Found, Windspeed Kernel does not Currently Support your Device Model, Close and Try Again"
             exit 12
           fi
 
@@ -853,7 +857,7 @@ jobs:
           curl -LSs https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/fix_blkdev_rename/setup.sh | bash -s fix_blkdev_rename
           sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' ./security/Kconfig
 
-      # Configuration information, marked with * indicates additional items, which carry a certain degree of risk and uncertainty
+      # Configuration Information, Marked with * Indicates Additional items, which carry a certain degree of risk and uncertainty
       - name: Add Configuration Settings
         run: |
           cd kernel_workspace/kernel_platform/common
@@ -925,7 +929,7 @@ jobs:
             echo "CONFIG_BBG=y" >> "$CONFIG_FILE"
           fi
 
-          # IPSET & IPv6 NAT Configuration*
+          # IPSET and IPv6 NAT Configuration*
           if [[ "${CPU}" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
             if [[ "$KERNEL_VERSION" != "6.12" ]]; then
               echo "CONFIG_BPF_STREAM_PARSER=y" >> "$CONFIG_FILE"
@@ -954,7 +958,7 @@ jobs:
             echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> "$CONFIG_FILE"
           fi
 
-          # Fix build issues
+          # Fix Build Issues
           if [ "$KERNEL_VERSION" = "6.1" ] && [[ "$CPU" == mt* ]]; then
             echo "CONFIG_DEBUG_INFO_BTF=n" >> "$CONFIG_FILE"
           fi
@@ -963,10 +967,10 @@ jobs:
             echo "CONFIG_ANDROID_BINDER_IPC_RUST=m" >> "$CONFIG_FILE"
           fi
 
-          # Remove build review
+          # Remove Build Review
           sed -i 's/check_defconfig//' ./build.config.gki
 
-      - name: Fix IPv6_NAT Error
+      - name: Fix IPv6 NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
@@ -978,7 +982,7 @@ jobs:
             echo "Your device does not support IPv6 NAT, skip this step"
           fi
 
-      # Custom kernel build time, without adding #1 SMP PREEMPT
+      # Custom Kernel Build Time, without adding #1 SMP PREEMPT
       - name: Custom BUILD_TIME
         shell: bash
         run: |
