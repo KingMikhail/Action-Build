@@ -649,7 +649,7 @@ jobs:
           [[ -n "$KSU_CUSTOM_TAG" ]] && echo "Custom version identification: $KSU_CUSTOM_TAG" || echo "Custom version identification: not enabled"
           [[ -n "$MANUAL_HASH" ]] && echo "Manually specify hash: $MANUAL_HASH" || echo "Manually specify hash: not enabled"
 
-          if [[ ${{ github.event.inputs.MANAGER_SOURCE }} == "ReSukiSU-Main" ]]; then
+          if [[ ${{ github.event.inputs.KSU_META }} == "ReSukiSU-Main" ]]; then
             curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$BRANCH_NAME"
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="$KSU_VERSION-$KSU_CUSTOM_TAG"' >> ./common/arch/arm64/configs/gki_defconfig
             cd ./KernelSU
@@ -668,7 +668,7 @@ jobs:
             echo "kSUVER=$KSU_VERSION" >> $GITHUB_OUTPUT
           
           else 
-            [[ ${{ github.event.inputs.MANAGER_SOURCE }} == "SukiSU-Ultra-Main" ]]; then
+            [[ ${{ github.event.inputs.KSU_META }} == "SukiSU-Ultra-Main" ]]; then
             curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$BRANCH_NAME"
             cd ./KernelSU
             
