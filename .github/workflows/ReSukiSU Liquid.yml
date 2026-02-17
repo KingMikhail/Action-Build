@@ -59,10 +59,10 @@ on:
         type: choice
         description: "Manager call direction"
         required: true
-        default: ReSukiSU-Main
+        default: ReSukiSU
         options:
-          - ReSukiSU-Main
-          - SukiSU-Ultra-Main
+          - ReSukiSU
+          - SukiSU-Ultra
       SUSFS_CI:
         type: choice
         description: "SUSFS module download call direction"
@@ -614,11 +614,11 @@ jobs:
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
 
           case "$MANAGER_SOURCE" in
-            SukiSU-Ultra-Main)
+            SukiSU-Ultra)
               BRANCH="main"
-              ARTIFACT="Manager-release"
+              ARTIFACT="Manager"
               ;;
-            ReSukiSU-Main|*)
+            ReSukiSU|*)
               BRANCH="main"
               ARTIFACT="Manager-release"
               ;;
@@ -627,7 +627,7 @@ jobs:
           echo "manager_branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "manager_artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
-      - name: Add ReSukiSU
+      - name: Add KernelSU Forks ${KSU_META}
         run: |
           cd kernel_workspace/kernel_platform
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
@@ -1281,7 +1281,7 @@ jobs:
           wget -O ksu_module_susfs_1.5.2+_Release.zip https://github.com/sidex15/ksu_module_susfs/releases/latest/download/ksu_module_susfs_1.5.2+.zip
           cp ksu_module_susfs_1.5.2+_Release.zip ./AnyKernel3/
 
-      - name: Download Latest ReSukiSU APK from CI
+      - name: Download Latest KernelSU Forks Manager APK from CI
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1295,13 +1295,13 @@ jobs:
           run_id=$(gh api "repos/ReSukiSU/ReSukiSU/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
 
           if [[ -z "$run_id" ]]; then
-            echo "No successful workflow run found on branch $MANAGER_BRANCH. Skipping download."
+            echo "No Successful Workflow Run Found on Branch $MANAGER_BRANCH, Skipping Download"
             exit 0
           fi
           artifact_url=$(gh api "repos/ReSukiSU/ReSukiSU/actions/runs/$run_id/artifacts" | jq -r ".artifacts[] | select(.name == \"$MANAGER_ARTIFACT\") | .archive_download_url" | head -n1)
 
           if [[ -z "$artifact_url" ]]; then
-            echo "No artifact '$MANAGER_ARTIFACT' found in run $run_id. Skipping download."
+            echo "No Artifact '$MANAGER_ARTIFACT' found in run $run_id. Skipping download."
             exit 0
           fi
           echo "Downloading from: $artifact_url"
@@ -1316,7 +1316,7 @@ jobs:
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AK3-ReSukiSU-${{ env.KSUVER }}-${{ steps.extract_info.outputs.value }}(${{ env.TKERNEL_VERSION }})${{ steps.suffix.outputs.value }}
+          name: AK3-${KSU_META}-${{ env.KSUVER }}-${{ steps.extract_info.outputs.value }}(${{ env.TKERNEL_VERSION }})${{ steps.suffix.outputs.value }}
           path: ./AnyKernel3/*
 
       - name: Extract and Process ZRAM Module
