@@ -1303,7 +1303,7 @@ jobs:
           wget -O ksu_module_susfs_1.5.2+_Release.zip https://github.com/sidex15/ksu_module_susfs/releases/latest/download/ksu_module_susfs_1.5.2+.zip
           cp ksu_module_susfs_1.5.2+_Release.zip ./AnyKernel3/
 
-      - name: Download Latest ReSukiSU APK from CI
+      - name: Download Latest Root Manager APK from CI
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1313,7 +1313,8 @@ jobs:
 
           echo "Using Branch: $MANAGER_BRANCH"
           echo "Downloading Artifact: $MANAGER_ARTIFACT"
-
+          
+          KSU_TYPE="${{ github.event.inputs.KSU_TYPE }}"
           run_id=$(gh api "repos/${KSU_TYPE}/${KSU_TYPE}/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
 
           if [[ -z "$run_id" ]]; then
@@ -1338,7 +1339,7 @@ jobs:
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AK3-${KSU_TYPE}-${{ env.KSUVER }}-${{ steps.extract_info.outputs.value }}(${{ env.TKERNEL_VERSION }})${{ steps.suffix.outputs.value }}
+          name: AK3-${{ github.event.inputs.KSU_TYPE }}-${{ env.KSUVER }}-${{ steps.extract_info.outputs.value }}(${{ env.TKERNEL_VERSION }})${{ steps.suffix.outputs.value }}
           path: ./AnyKernel3/*
 
       - name: Extract and Process ZRAM Module
