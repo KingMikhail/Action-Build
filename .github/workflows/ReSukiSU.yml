@@ -101,9 +101,6 @@ on:
         description: "Branch name (required) / Custom version identifier (leave blank and do not modify) / Revert branch commit hash version (leave blank and do not modify)"
         required: false
         default: "main/ReSukiSU/"
-        options:
-         - main/ReSukiSU/
-         - main/SukiSU-Ultra
       ZRAM:
         type: string
         description: "ZRAM (0 for off, 1 for on)/algorithm name/size"
@@ -749,15 +746,15 @@ jobs:
             echo "Add SUSFS Patches Underway..."
             patch -p1 < 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
             echo "SUSFS Patches Complete!"
+            echo "Revert Patches, Add 69 Hide Stuff Patches..."
+            patch -p1 < 69_hide_stuff.patch || true
+            echo "69 Hide Stuff Patches Complete!"
 
             # Revert Some GKI Patches
             if [ "$fake_patched" = 1 ]; then
               if [ "$GKI_V" = "android15-6.6" ]; then
                 if grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
                   sed -i -e '/unsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;/d' -e '/pagemap_entry_t \*res = NULL;/d' ./fs/proc/task_mmu.c
-                  echo "Revert Patches, Add 69 Hide Stuff Patches..."
-                  patch -p1 < 69_hide_stuff.patch || true
-                  echo "69 Hide Stuff Patches Complete!"
                 fi
               fi
               if [ "$GKI_V" = "android12-5.10" ] || [ "$GKI_V" = "android13-5.15" ] || [ "$GKI_V" = "android14-6.1" ]; then
