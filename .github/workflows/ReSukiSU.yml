@@ -511,7 +511,7 @@ jobs:
             echo "ENABLE_RUST=false" >> $GITHUB_ENV
           fi
 
-      # Custom kernel suffix
+      # Custom Kernel Suffix
       - name: Custom Kernel Suffix if set
         if: ${{ github.event.inputs.SUFFIX != '' }}
         run: |
@@ -692,36 +692,36 @@ jobs:
            else
              VERSION_FULL="v$KSU_API_VERSION-$CUSTOM_TAG"
            fi    
+
+           # Cleanup and Write KBuild Version Information
+           sed -i '/define get_ksu_version_full/,/endef/d' kernel/Kbuild
+           sed -i '/KSU_VERSION_API :=/d' kernel/Kbuild
+           sed -i '/KSU_VERSION_FULL :=/d' kernel/Kbuild
+
+           VERSION_DEFINITIONS=$(cat <<EOF
+             define get_ksu_version_full
+             $VERSION_FULL
+             endef
+
+             KSU_VERSION_API := $KSU_API_VERSION
+             KSU_VERSION_FULL := $VERSION_FULL
+           EOF
+           )
+
+           awk -v def="$VERSION_DEFINITIONS" '
+             /REPO_OWNER :=/ {print; print def; inserted=1; next}
+             1
+             END {if (!inserted) print def}
+           ' kernel/Kbuild > kernel/Kbuild.tmp && mv kernel/Kbuild.tmp kernel/Kbuild
+
+             KSU_VERSION=$(expr $(git rev-list --count "$MANAGER_BRANCH" 2>/dev/null || echo 13000) + 37185)
+             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+
+             echo "::group::Eventually KBuild Preview of the Medium Version Information and some Debugging Results"
+             grep -A10 "REPO_OWNER" kernel/Kbuild
+             grep "KSU_VERSION_FULL" kernel/Kbuild
+             echo "::endgroup::"
           fi
-
-          # Cleanup and Write KBuild Version Information
-          sed -i '/define get_ksu_version_full/,/endef/d' kernel/Kbuild
-          sed -i '/KSU_VERSION_API :=/d' kernel/Kbuild
-          sed -i '/KSU_VERSION_FULL :=/d' kernel/Kbuild
-
-          VERSION_DEFINITIONS=$(cat <<EOF
-            define get_ksu_version_full
-            $VERSION_FULL
-            endef
-
-            KSU_VERSION_API := $KSU_API_VERSION
-            KSU_VERSION_FULL := $VERSION_FULL
-          EOF
-          )
-
-          awk -v def="$VERSION_DEFINITIONS" '
-            /REPO_OWNER :=/ {print; print def; inserted=1; next}
-            1
-            END {if (!inserted) print def}
-          ' kernel/Kbuild > kernel/Kbuild.tmp && mv kernel/Kbuild.tmp kernel/Kbuild
-
-          KSU_VERSION=$(expr $(git rev-list --count "$MANAGER_BRANCH" 2>/dev/null || echo 13000) + 37185)
-          echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-
-          echo "::group::Eventually KBuild Preview of the Medium Version Information and some Debugging Results"
-          grep -A10 "REPO_OWNER" kernel/Kbuild
-          grep "KSU_VERSION_FULL" kernel/Kbuild
-          echo "::endgroup::"
 
       - name: Apply Patches ReSukiSU
         env:
