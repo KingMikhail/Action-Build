@@ -631,6 +631,7 @@ jobs:
           echo "manager_artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
       - name: Add ReSukiSU or SukiSU-Ultra
+        id: manager
         run: |
           cd kernel_workspace/kernel_platform
           MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
@@ -650,9 +651,9 @@ jobs:
           [[ -n "$MANUAL_HASH" ]] && echo "Manually specify hash: $MANUAL_HASH" || echo "Manually specify hash: not enabled"
 
           if [[ ${{ github.event.inputs.MANAGER_SOURCE }} == "ReSukiSU-Main" ]]; then
-           curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$BRANCH_NAME"
-           echo 'CONFIG_KSU_FULL_NAME_FORMAT="$KSU_VERSION-$KSU_CUSTOM_TAG"' >> ./common/arch/arm64/configs/gki_defconfig
-           cd ./KernelSU
+            curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$BRANCH_NAME"
+            echo 'CONFIG_KSU_FULL_NAME_FORMAT="$KSU_VERSION-$KSU_CUSTOM_TAG"' >> ./common/arch/arm64/configs/gki_defconfig
+            cd ./KernelSU
            
             if [[ -n "$KSU_CUSTOM_TAG" ]]; then
             echo "KSU_CUSTOM_TAG=$KSU_CUSTOM_TAG" >> "$GITHUB_ENV"
@@ -667,7 +668,8 @@ jobs:
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             echo "kSUVER=$KSU_VERSION" >> $GITHUB_OUTPUT
           
-          else [[ ${{ github.event.inputs.MANAGER_SOURCE }} == "SukiSU-Ultra-Main" ]]; then
+          else 
+            [[ ${{ github.event.inputs.MANAGER_SOURCE }} == "SukiSU-Ultra-Main" ]]; then
             curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$BRANCH_NAME"
             cd ./KernelSU
             
@@ -729,8 +731,7 @@ jobs:
               echo "::group::Eventually KBuild Preview of the Medium Version Information and some Debugging Results"
               grep -A10 "REPO_OWNER" kernel/Kbuild
               grep "KSU_VERSION_FULL" kernel/Kbuild
-              echo "::endgroup::"
-           fi
+          fi
 
       - name: Apply Patches ReSukiSU
         env:
