@@ -776,7 +776,7 @@ jobs:
       # Patches
       # -----------------------------
       - name: Apply KSU META, SUSFS, ZRAM, and Legacy Kernel Patches
-        if: ${{ github.event.inputs.SUSFS_META != '-1' }}
+        if: inputs.SUSFS_META
         run: |
           set -euo pipefail
 
