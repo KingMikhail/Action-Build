@@ -774,7 +774,7 @@ jobs:
             echo "Fix 5.15 Patch Complete!"
           fi
 
-          if [[ "${{ env.KV2 }}" == "66" && "${{ env.KV3 }}" -le 6630 && "${{ github.event.inputs.SUSFS_META }}" != "-1" ]]; then
+          if [[ "$KV1" == "6" && "$KV2" -le 6630 && "${{ github.event.inputs.SUSFS_META }}" != "-1" ]]; then
             TRUSTY_EXISTS="false"
             if grep -q 'common-modules/trusty' "$GITHUB_WORKSPACE/.repo/manifests_fallback/${FILE}.xml"; then
               TRUSTY_EXISTS="true"
@@ -868,7 +868,11 @@ jobs:
             exit 10
           fi
           # Parsing fields: Switch status / Algorithm name / Size
-          IFS='/' read -r ZRAM_SWSTA ZRAM_ALGO ZRAM_SIZE <<< "$ZRAM"
+          IFS='/' read -r ZRAM_SWSTA ZRAM_ALGO ZRAM_SIZE EXTRA <<< "$ZRAM"
+          if [ -n "$EXTRA" ]; then
+             echo "Invalid ZRAM format"
+             exit 1
+          fi
           echo "ZRAM_ALGO=$ZRAM_ALGO" >> $GITHUB_ENV
           echo "ZRAM_ALGO_U=${ZRAM_ALGO^^}" >> $GITHUB_ENV
           echo "ZRAM_SIZE=$ZRAM_SIZE" >> $GITHUB_ENV
@@ -929,16 +933,15 @@ jobs:
             echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-${KSU_CUSTOM_TAG}@${MANAGER_BRANCH}[%COMMIT_SHA%]\"" >> "$CONFIG_FILE"
           fi
 
-          # KPM configuration
-          if [ "${{ github.event.inputs.KPM }}" = "KPM" ] || [ "${{ github.event.inputs.KPM }}" = "NoN" ]; then
-            echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
-          fi
-          if [ "${{ github.event.inputs.KPM }}" = "KPN" ]; then
-            echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
-            else [ "${{ github.event.inputs.KPM }}" = "NoN" ]; then
-            echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
-            fi
-          fi
+          # KPM Configuration
+          case "${{ github.event.inputs.KPM }}" in
+            KPM)
+              echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
+              ;;
+            KPN|NoN)
+              echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
+              ;;
+          esac
 
           # SUSFS configuration
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
