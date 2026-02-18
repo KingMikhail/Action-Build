@@ -179,9 +179,6 @@ jobs:
           remove-haskell: 'true'
           remove-codeql: 'true'
 
-      # -----------------------------
-      # Extract Manifest Information
-      # -----------------------------     
       - name: Extract Manifest Information
         id: extract_info
         env:
@@ -323,9 +320,6 @@ jobs:
           # Convey Combined Information
           echo "value=${FILE_BASE}_Android${ANDROID_VERSION}" >> "$GITHUB_OUTPUT"
           
-      # -----------------------------
-      # Debug Show Selected Inputs
-      # -----------------------------     
       - name: Debug Show Selected Inputs
         run: |
           echo "============================"
@@ -354,15 +348,9 @@ jobs:
           echo "Selected XUS_FIX: ${{ github.event.inputs.XUS_FIX }}"
           echo "============================"
 
-      # -----------------------------
-      # Check Disk Space
-      # -----------------------------     
       - name: Check Disk Space
         run: df -h
 
-      # -----------------------------
-      # Create and Enable 3G Swap
-      # -----------------------------
       - name: Create and Enable 3G Swap
         run: |
           sudo swapoff -a
@@ -372,9 +360,6 @@ jobs:
           sudo swapon /swapfile
           free -h
 
-      # -----------------------------
-      # Set Cache Environment
-      # -----------------------------
       - name: Set Cache Environment
         if: ${{ github.event.inputs.BUILD_NOCCACHE == 'false' }}
         run: |
@@ -382,26 +367,17 @@ jobs:
           mkdir -p "$HOME/.ccache_${{ github.event.inputs.FILE }}"
           echo "set: $HOME/.ccache_${{ github.event.inputs.FILE }}"
 
-      # -----------------------------
-      # Configure Git
-      # -----------------------------
       - name: Configure Git
         run: |
           git config --global user.name "KingMikhail"
           git config --global user.email "andreimikhail1987@gmail.com"
-
-      # -----------------------------
-      # Install Dependencies + APTC
-      # -----------------------------
+          
       - name: Install Dependencies + APTC
         uses: awalsh128/cache-apt-pkgs-action@latest 
         with: 
           packages: python3 git curl ccache libelf-dev build-essential flex bison libssl-dev libncurses-dev liblz4-tool zlib1g-dev libxml2-utils rsync unzip gawk dos2unix kmod libdw-dev elfutils
           execute_install_scripts: true
 
-      # -----------------------------
-      # Restore Ccache
-      # -----------------------------
       - name: Restore Ccache
         if: ${{ github.event.inputs.BUILD_NOCCACHE == 'false' }}
         uses: actions/cache@v3
@@ -409,9 +385,6 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.event.inputs.FILE }}-${{ env.BUILD_METHOD }}-${{ github.event.inputs.FAST_BUILD == 'true' && 'alpha' || 'beta' }}-16.1
 
-      # -----------------------------
-      # Initialize Ccache
-      # -----------------------------
       - name: Initialize Ccache
         if: ${{ github.event.inputs.BUILD_NOCCACHE == 'false' }}
         run: |
@@ -431,18 +404,12 @@ jobs:
           fi
           ccache -s
           
-      # -----------------------------
-      # Install Repo Tool
-      # -----------------------------
       - name: Install Repo Tool
         run: |
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
           chmod a+x ~/repo
           sudo mv ~/repo /usr/local/bin/repo
 
-      # -----------------------------
-      # Initialize Repo and Sync
-      # -----------------------------
       - name: Initialize Repo and Sync
         env:
           FILE: ${{ github.event.inputs.FILE }}
@@ -463,9 +430,6 @@ jobs:
             rm -f "$dir/android/abi_gki_protected_exports_"* 2>/dev/null || echo "No protected exports in $dir"
           done
 
-      # -----------------------------
-      # Kernel Version Handling
-      # -----------------------------
       - name: Kernel Version Handling
         run: |
           cd kernel_workspace/kernel_platform
@@ -632,9 +596,6 @@ jobs:
           git add -A
           git commit -m "Random suffix & remove -dirty"
           
-      # -----------------------------
-      # Selected Root Manager
-      # -----------------------------
       - name: Add Selected KSU Meta
         run: |
           # Go to Kernel Working Directory
@@ -772,9 +733,6 @@ jobs:
             echo "No Built-in KernelSU Mode has been Selected to Skip KernelSU Configuration..."
           fi
 
-      # -----------------------------
-      # Patches
-      # -----------------------------
       - name: Apply KSU META, SUSFS, ZRAM, and Legacy Kernel Patches
         if: inputs.SUSFS_META
         run: |
@@ -1025,8 +983,10 @@ jobs:
           cd kernel_workspace/kernel_platform/common
           CONFIG_FILE=./arch/arm64/configs/gki_defconfig
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
-
+          
+          # -----------------------------
           # Selected Root Configuration
+          # -----------------------------
           echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
           echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
 
@@ -1039,8 +999,9 @@ jobs:
               echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
               ;;
           esac
-
+          # -----------------------------
           # SUSFS Configuration
+          # -----------------------------
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
             echo "CONFIG_KSU_SUSFS=y" >> "$CONFIG_FILE"
             echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> "$CONFIG_FILE"
@@ -1056,11 +1017,15 @@ jobs:
             echo "CONFIG_KSU_SUSFS=n" >> "$CONFIG_FILE"
           fi
 
+          # -----------------------------
           # Mountify TMPFS Configuration*
+          # -----------------------------
           echo "CONFIG_TMPFS_XATTR=y" >> "$CONFIG_FILE"
           echo "CONFIG_TMPFS_POSIX_ACL=y" >> "$CONFIG_FILE"
-
+          
+          # -----------------------------
           # BBR and ECN Configuration*
+          # -----------------------------
           if [ "${{ github.event.inputs.BBR_ECN }}" = "true" ]; then
             echo "CONFIG_TCP_CONG_ADVANCED=y" >> "$CONFIG_FILE"
             echo "CONFIG_TCP_CONG_BBR=y" >> "$CONFIG_FILE"
@@ -1073,8 +1038,9 @@ jobs:
             echo "CONFIG_IPV6_ECN=y" >> "$CONFIG_FILE"
             echo "CONFIG_IP_NF_TARGET_ECN=y" >> "$CONFIG_FILE"
           fi
-
+          # -----------------------------
           # ZRAM Configuration*
+          # -----------------------------
           if [[ "${{ github.event.inputs.ZRAM }}" == 1/* ]]; then
             echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
             echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
@@ -1083,13 +1049,16 @@ jobs:
             echo "CONFIG_CRYPTO_LZ4K_OPLUS=y" >> "$CONFIG_FILE"
             echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
           fi
-
+          # -----------------------------
           # LSM Baseband Guard Configuration*
+          # -----------------------------
           if [ "${{ github.event.inputs.LSM }}" = "true" ]; then
             echo "CONFIG_BBG=y" >> "$CONFIG_FILE"
           fi
-
+          
+          # -----------------------------
           # IPSet and IPV6 NAT Configuration
+          # -----------------------------
           if [[ "$CPU" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
 
             echo "Applying IPSET & IPv6 NAT configuration..."
@@ -1106,28 +1075,38 @@ jobs:
               sed -i "/^${option}=*/d" "$CONFIG_FILE"
               echo "${option}=${value}" >> "$CONFIG_FILE"
             }
-
+            
+            # -----------------------------
             # Kernel-specific condition
+            # -----------------------------
             if [[ "$KERNEL_VERSION" != "6.12" ]]; then
               enable_config CONFIG_BPF_STREAM_PARSER
             else
               echo "Skipping CONFIG_BPF_STREAM_PARSER for kernel 6.12"
             fi
 
+            # -----------------------------
             # Netfilter / IPSet Core
+            # -----------------------------
             enable_config CONFIG_NETFILTER_XT_MATCH_ADDRTYPE
             enable_config CONFIG_NETFILTER_XT_SET
             enable_config CONFIG_IP_SET
 
+            # -----------------------------
             # IPSet Max Size
+            # -----------------------------
             set_config_value CONFIG_IP_SET_MAX 65534
 
+            # -----------------------------
             # Bitmap Support
+            # -----------------------------
             enable_config CONFIG_IP_SET_BITMAP_IP
             enable_config CONFIG_IP_SET_BITMAP_IPMAC
             enable_config CONFIG_IP_SET_BITMAP_PORT
 
+            # -----------------------------
             # Hash Types
+            # -----------------------------
             enable_config CONFIG_IP_SET_HASH_IP
             enable_config CONFIG_IP_SET_HASH_IPMARK
             enable_config CONFIG_IP_SET_HASH_IPPORT
@@ -1141,10 +1120,14 @@ jobs:
             enable_config CONFIG_IP_SET_HASH_NETPORT
             enable_config CONFIG_IP_SET_HASH_NETIFACE
 
+            # -----------------------------
             # List Type
+            # -----------------------------
             enable_config CONFIG_IP_SET_LIST_SET
-
+            
+            # -----------------------------
             # IPV6 NAT
+            # -----------------------------
             enable_config CONFIG_IP6_NF_NAT
             enable_config CONFIG_IP6_NF_TARGET_MASQUERADE
 
@@ -1153,8 +1136,10 @@ jobs:
           else
             echo "Skipping IPSET and IPV6 NAT Configuration"
           fi
-
+          
+          # -----------------------------
           # Fix Build Issues
+          # -----------------------------
           if [ "$KERNEL_VERSION" = "6.1" ] && [[ "$CPU" == mt* ]]; then
             echo "CONFIG_DEBUG_INFO_BTF=n" >> "$CONFIG_FILE"
           fi
@@ -1166,9 +1151,6 @@ jobs:
           # Remove Build Review
           sed -i 's/check_defconfig//' ./build.config.gki
           
-      # -----------------------------
-      # BetterNet
-      # -----------------------------
       - name: Fix IPV6 NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
@@ -1179,24 +1161,31 @@ jobs:
           PATCH_FILE="${PATCH_DIR}/IPv6_NAT_FIX.patch"
 
           echo "Detected CPU: ${CPU:-undefined}"
-
+          # -----------------------------
           # Ensure CPU Exists
+          # -----------------------------
           if [[ -z "${CPU:-}" ]]; then
             echo "CPU Variable Not Set, Skipping IPV6 NAT Fix"
             exit 0
           fi
 
+          # -----------------------------
           # Snapdragon Only
+          # -----------------------------
           if [[ "$CPU" == sm* ]]; then
             echo "Snapdragon Platform Detected, Preparing to Apply IPV6 NAT Fix..."
 
+            # -----------------------------
             # Validate Kernel Directory
+            # -----------------------------
             if [[ ! -d "$KERNEL_DIR" ]]; then
               echo "Kernel Directory Not Found: $KERNEL_DIR"
               exit 1
             fi
-
+            
+            # -----------------------------
             # Validate Patch File
+            # -----------------------------
             if [[ ! -f "$PATCH_FILE" ]]; then
               echo "IPV6 NAT Patch Not Found: $PATCH_FILE"
               exit 1
@@ -1204,7 +1193,9 @@ jobs:
 
             cd "$KERNEL_DIR"
 
+            # -----------------------------
             # Apply Safely (Idempotent)
+            # -----------------------------
             if patch -p1 -F 3 --dry-run < "$PATCH_FILE" > /dev/null 2>&1; then
               patch -p1 -F 3 < "$PATCH_FILE"
               echo "IPV6 NAT Fix Applied Successfully"
@@ -1216,9 +1207,6 @@ jobs:
             echo "Non-Snapdragon Platform Detected, Skipping IPV6 NAT Fix"
           fi
 
-      # -----------------------------
-      # Custom Kernel Build Time, Without Adding #1 SMP PREEMPT
-      # -----------------------------
       - name: Custom Build Time
         shell: bash
         run: |
@@ -1244,18 +1232,12 @@ jobs:
             fi
           done
 
-      # -----------------------------
-      # Disable GPUEB
-      # -----------------------------
       - name: Disable GPUEB
         if: ${{ env.KERNEL_VERSION == '5.10' && startsWith(env.CPU, 'mt') }}
         run: |
           echo "Disabling GPUEB for MTK Kernel 5.10"
           sed -i '/obj-y.*gpueb/d' kernel_workspace/kernel-5.10/drivers/gpu/mediatek/Makefile
 
-      # -----------------------------
-      # Fast Build
-      # -----------------------------
       - name: Build Kernel Fast
         if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
         id: fast_build
@@ -1263,18 +1245,23 @@ jobs:
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
           echo "fallback=false" >> "$GITHUB_OUTPUT"
           cd kernel_workspace/kernel_platform
-
+          
+          # -----------------------------
           # Automatic Detection of LLVM IAS
+          # -----------------------------
           if [[ -f ./common/build.config.arm ]] && grep -q '^LLVM_IAS=1' ./common/build.config.arm; then
             USE_LLVM_IAS=true
           else
             USE_LLVM_IAS=false
           fi
-
+          # -----------------------------
           # Ensure Path-2 is Defined
+          # -----------------------------
           PATH_2="${PATH_2:-}"
 
+          # -----------------------------
           # Read Clang Prebuilt Bin from Build Config Common
+          # -----------------------------
           CLANG_PREBUILT_BIN=""
           for f in ./common/build.config.common ${PATH_2:+./$PATH_2/build.config.common}; do
           [[ -f "$f" ]] || continue
@@ -1287,12 +1274,15 @@ jobs:
             echo "Consider Disabling Fast Build and Submit an Issue"
             exit 0
           fi
-
+          # -----------------------------
           # Try Extracting the Clang-r Version from Clang Prebuilt Bin First
+          # -----------------------------
           if [[ "$CLANG_PREBUILT_BIN" =~ (clang-r[0-9a-z]+) ]]; then
             CLANG_VERSION="${BASH_REMATCH[1]}"
           else
+            # -----------------------------
             # If No Match Found, Try Extracting from Build Config Constants
+            # -----------------------------
             if [[ -f ./common/build.config.constants ]]; then
               CLANG_VERSION=$(grep '^CLANG_VERSION=' ./common/build.config.constants | cut -d'=' -f2 || true)
             fi
@@ -1304,12 +1294,17 @@ jobs:
             echo "Consider disabling Fast Build and Submit an Issue"
             exit 0
           fi
-
+          # -----------------------------
           # Replace with New Clang Version Value
+          # -----------------------------
           CLANG_PREBUILT_BIN=${CLANG_PREBUILT_BIN/\$\{CLANG_VERSION\}/$CLANG_VERSION}
+          # -----------------------------
           # Get First Directory Name of Clang Prebuilt Bin and Assign it to Clang Dir
+          # -----------------------------
           CLANG_DIR=$(echo "$CLANG_PREBUILT_BIN" | cut -d'/' -f1)
+          # -----------------------------
           # Get Parent Directory Name of Clang Prebuilt Bin and Assign it to Clang Path
+          # -----------------------------
           CLANG_PATH=$(basename "$(dirname "$CLANG_PREBUILT_BIN")")
 
           echo "-----------------------------"
@@ -1332,8 +1327,9 @@ jobs:
           fi
 
           cd ./common
-
+          # -----------------------------
           # Remapping physical paths
+          # -----------------------------
           MAP="-fdebug-prefix-map=${GITHUB_WORKSPACE}=."
           MPMAP="-fmacro-prefix-map=${GITHUB_WORKSPACE}=."
           FPMAP="-ffile-prefix-map=${GITHUB_WORKSPACE}=."
@@ -1377,10 +1373,7 @@ jobs:
           make O=out "${MAKE_ARGS[@]}" olddefconfig
           make -j"$(nproc --all)" O=out "${MAKE_ARGS[@]}"
           ccache -s
-
-      # -----------------------------
-      # Fallback to Build Kernel
-      # -----------------------------
+          
       - name: Fallback to Build Kernel
         if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
         run: |
@@ -1393,9 +1386,6 @@ jobs:
             ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
           fi
 
-      # -----------------------------
-      # Clone AnyKernel3 Repository
-      # -----------------------------
       - name: Make AnyKernel3
         run: |
           git clone https://github.com/KingMikhail/AnyKernel3 --depth=1
@@ -1424,9 +1414,6 @@ jobs:
             cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
           fi
           
-      # -----------------------------
-      # SukiSU and ReSukiSU Builtin KPM Function
-      # -----------------------------
       - name: Apply Patch Linux and Replace Image
         if: ${{ github.event.inputs.KPM == 'KPM' }}
         run: |
@@ -1439,27 +1426,18 @@ jobs:
           rm -f Image
           mv oImage Image
           cp Image "${GITHUB_WORKSPACE}/AnyKernel3/Image"
-
-      # -----------------------------
-      # Zip Suffix
-      # -----------------------------
+          
       - name: Set Zip Suffix
         id: suffix
         run: |
           echo "value=${{ env.ZRAM_ALGO_U && format('_{0}', env.ZRAM_ALGO_U) || '' }}${{ github.event.inputs.KPM == 'KPM' && '_KPM' || github.event.inputs.KPM == 'KPN' && '_KPN' || '' }}${{ github.event.inputs.LSM == 'true' && '_LSM' || '' }}_ILH${{ github.event.inputs.SCHED== 'true' && '_SCHED' || '' }}" >> $GITHUB_OUTPUT
 
-      # -----------------------------
-      # Upload AnyKernel3 Zip
-      # -----------------------------
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
           name: AK3-${{ github.event.inputs.KSU_META }}-${{ env.KSUVER }}-${{ github.run_number }}
           path: ./AnyKernel3/*
           
-      # -----------------------------
-      # Extract and Process ZRAM Module
-      # -----------------------------
       - name: Extract and Process ZRAM Module
         if: startsWith(github.event.inputs.ZRAM, '1/')
         id: zram_find
@@ -1513,9 +1491,6 @@ jobs:
             exit 0
           fi
 
-      # -----------------------------
-      # Upload ZRAM Module
-      # -----------------------------
       - name: Upload ZRAM Module
         if: startsWith(github.event.inputs.ZRAM, '1/') && steps.zram_find.outputs.upload != 'false'
         uses: actions/upload-artifact@v4
@@ -1523,8 +1498,5 @@ jobs:
           name: ZRAM-Module_${{ env.KERNEL_VERSION }}_${{ steps.extract_info.outputs.value }}
           path: ZRAM-Module/*
 
-      # -----------------------------
-      # Post-build Disk Check
-      # -----------------------------
       - name: Post-build Disk Check
         run: df -h
