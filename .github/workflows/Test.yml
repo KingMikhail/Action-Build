@@ -596,11 +596,12 @@ jobs:
           git add -A
           git commit -m "Random suffix & remove -dirty"
       
-      - name: Add Selected KernelSU Fork
+      - name: Add Selected Root Manager
         run: |
           # Go to Kernel Working Directory
           cd kernel_workspace/kernel_platform
-          if [[ ${{ github.event.inputs.KSU_META }} == "SukiSU-Ultra" ]]; then
+          KSU_META="${{ github.event.inputs.KSU_META }}"
+          if [[ "$KSU_META" == "SukiSU-Ultra" ]]; then
             echo "Configure SukiSU Ultra..."
             curl -LSs "https://raw.githubusercontent.com/ShirkNeko/SukiSU-Ultra/refs/heads/main/kernel/setup.sh" | bash -s builtin
             cd ./KernelSU
@@ -680,8 +681,7 @@ jobs:
             grep -A10 "REPO_OWNER" kernel/Kbuild  # Check the Contents After the Insertion Point
             grep "KSU_VERSION_FULL" kernel/Kbuild # Confirm that the Version Definition Exists
             echo "SukiSU-Ultra Version Number: v${KSU_API_VERSION}-${GIT_COMMIT_HASH}@Andrei"
-          KSU_META="${{ github.event.inputs.KSU_META }}"
-            if [[ "$KSU_META" == "ReSukiSU" ]]; then
+          elif [[ "$KSU_META" == "ReSukiSU" ]]; then
             echo "Configure ReSukiSU..."
             curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/refs/heads/main/kernel/setup.sh" | bash -s main
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-%COMMIT_SHA%@Andrei"' >> ./common/arch/arm64/configs/gki_defconfig
@@ -693,7 +693,7 @@ jobs:
             # Store the Version Number to a GitHub Environment Variable
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             echo "KSUVERSION=$KSU_VERSION" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.event.inputs.KSU_META }} == "KernelSU-Next" ]]; then
+          elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
             echo "Configure KernelSU Next..."
             curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
             cd KernelSU-Next
@@ -708,7 +708,7 @@ jobs:
             cd ../common/drivers/kernelsu
             wget https://github.com/cctv18/oppo_oplus_realme_sm8750/raw/refs/heads/main/other_patch/apk_sign.patch
             patch -p2 -N -F 3 < apk_sign.patch || true
-          elif [[ ${{ github.event.inputs.KSU_META }} == "MKernelSU" ]]; then
+          elif [[ "$KSU_META" == "MKernelSU" ]]; then
             echo "Configure MKSU (5ec1cff/KernelSU)..."
             curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
             cd ./KernelSU
@@ -716,7 +716,7 @@ jobs:
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             echo "KSUVERSION=$KSU_VERSION" >> $GITHUB_OUTPUT
             sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" kernel/Kbuild
-          elif [[ ${{ github.event.inputs.KSU_META }} == "KernelSU" ]]; then
+          elif [[ "$KSU_META" == "KernelSU" ]]; then
             echo "Configure KernelSU (tiann/KernelSU)..."
             curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
             cd ./KernelSU
@@ -779,7 +779,7 @@ jobs:
             echo "Fix 5.15 Patch Complete!"
           fi
 
-          if [[ "$KV1" == "6" && "$KV2" -le 6630 && "${{ github.event.inputs.SUSFS_META }}" != "-1" ]]; then
+          if [[ "$KV1" == "6" && -n "$KV2" && "$KV2" -le 6630 && "${{ github.event.inputs.SUSFS_META }}" != "-1" ]]; then
             TRUSTY_EXISTS="false"
             if grep -q 'common-modules/trusty' "$GITHUB_WORKSPACE/.repo/manifests_fallback/${FILE}.xml"; then
               TRUSTY_EXISTS="true"
@@ -1080,7 +1080,7 @@ jobs:
           sed -i '/obj-y.*gpueb/d' kernel_workspace/kernel-5.10/drivers/gpu/mediatek/Makefile
 
       - name: BUILD KERNEL FAST
-        if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
+        if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
         id: fast_build
         run: |
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
@@ -1199,7 +1199,7 @@ jobs:
           ccache -s
 
       - name: Fallback to Build Kernel
-        if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
+        if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
         run: |
           cd kernel_workspace
           if [ -f ./kernel_platform/build_with_bazel.py ]; then
