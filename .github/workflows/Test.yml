@@ -1089,33 +1089,69 @@ jobs:
             echo "CONFIG_BBG=y" >> "$CONFIG_FILE"
           fi
 
-          # IPSET & IPV6 NAT Configuration*
-          if [[ "${CPU}" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
+          # IPSet and IPV6 NAT Configuration
+          if [[ "$CPU" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
+
+            echo "Applying IPSET & IPv6 NAT configuration..."
+
+            enable_config() {
+              local option="$1"
+              sed -i "/^${option}=*/d" "$CONFIG_FILE"
+              echo "${option}=y" >> "$CONFIG_FILE"
+            }
+
+            set_config_value() {
+              local option="$1"
+              local value="$2"
+              sed -i "/^${option}=*/d" "$CONFIG_FILE"
+              echo "${option}=${value}" >> "$CONFIG_FILE"
+            }
+
+            # Kernel-specific condition
             if [[ "$KERNEL_VERSION" != "6.12" ]]; then
-              echo "CONFIG_BPF_STREAM_PARSER=y" >> "$CONFIG_FILE"
+              enable_config CONFIG_BPF_STREAM_PARSER
+            else
+              echo "Skipping CONFIG_BPF_STREAM_PARSER for kernel 6.12"
             fi
-            echo "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y" >> "$CONFIG_FILE"
-            echo "CONFIG_NETFILTER_XT_SET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_MAX=65534" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_BITMAP_IP=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_BITMAP_IPMAC=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_BITMAP_PORT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_IP=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_IPMARK=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_IPPORT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_IPPORTIP=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_IPPORTNET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_IPMAC=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_MAC=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_NETPORTNET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_NET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_NETNET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_NETPORT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_NETIFACE=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_LIST_SET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP6_NF_NAT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> "$CONFIG_FILE"
+
+            # Netfilter / IPSet Core
+            enable_config CONFIG_NETFILTER_XT_MATCH_ADDRTYPE
+            enable_config CONFIG_NETFILTER_XT_SET
+            enable_config CONFIG_IP_SET
+
+            # IPSet Max Size
+            set_config_value CONFIG_IP_SET_MAX 65534
+
+            # Bitmap Support
+            enable_config CONFIG_IP_SET_BITMAP_IP
+            enable_config CONFIG_IP_SET_BITMAP_IPMAC
+            enable_config CONFIG_IP_SET_BITMAP_PORT
+
+            # Hash Types
+            enable_config CONFIG_IP_SET_HASH_IP
+            enable_config CONFIG_IP_SET_HASH_IPMARK
+            enable_config CONFIG_IP_SET_HASH_IPPORT
+            enable_config CONFIG_IP_SET_HASH_IPPORTIP
+            enable_config CONFIG_IP_SET_HASH_IPPORTNET
+            enable_config CONFIG_IP_SET_HASH_IPMAC
+            enable_config CONFIG_IP_SET_HASH_MAC
+            enable_config CONFIG_IP_SET_HASH_NETPORTNET
+            enable_config CONFIG_IP_SET_HASH_NET
+            enable_config CONFIG_IP_SET_HASH_NETNET
+            enable_config CONFIG_IP_SET_HASH_NETPORT
+            enable_config CONFIG_IP_SET_HASH_NETIFACE
+
+            # List Type
+            enable_config CONFIG_IP_SET_LIST_SET
+
+            # IPV6 NAT
+            enable_config CONFIG_IP6_NF_NAT
+            enable_config CONFIG_IP6_NF_TARGET_MASQUERADE
+
+            echo "IPSET & IPV6 NAT Configuration Applied Successfully"
+
+          else
+            echo "Skipping IPSET and IPV6 NAT Configuration"
           fi
 
           # Fix Build Issues
@@ -1138,8 +1174,8 @@ jobs:
         run: |
           set -e
 
-          PATCH_DIR="${GITHUB_WORKSPACE}/patches"
-          KERNEL_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
+          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
+          KERNEL_DIR="kernel_workspace/kernel_platform/common"
 
           cd "$KERNEL_DIR"
 
