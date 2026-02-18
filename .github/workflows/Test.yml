@@ -680,7 +680,8 @@ jobs:
             grep -A10 "REPO_OWNER" kernel/Kbuild  # Check the Contents After the Insertion Point
             grep "KSU_VERSION_FULL" kernel/Kbuild # Confirm that the Version Definition Exists
             echo "SukiSU-Ultra Version Number: v${KSU_API_VERSION}-${GIT_COMMIT_HASH}@Andrei"
-          elif [[ ${{ github.event.inputs.KSU_META }} == "ReSukiSU" ]]; then
+          KSU_META="${{ github.event.inputs.KSU_META }}"
+            if [[ "$KSU_META" == "ReSukiSU" ]]; then
             echo "Configure ReSukiSU..."
             curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/refs/heads/main/kernel/setup.sh" | bash -s main
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-%COMMIT_SHA%@Andrei"' >> ./common/arch/arm64/configs/gki_defconfig
@@ -759,7 +760,7 @@ jobs:
             cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
           fi
 
-          if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
+          if [[ "${{ github.event.inputs.ZRAM }}" == 1/* ]]; then
             echo "Pulling ZRAM patch"
             cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux/
             cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib/
@@ -771,7 +772,7 @@ jobs:
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
           SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
 
-          if [ "$GKI_V" == "android13-5.15" ] && [ "$SUBLEVEL" -lt 123 ]; then
+          if [[ "$GKI_V" == "android13-5.15" && -n "$SUBLEVEL" && "$SUBLEVEL" -lt 123 ]]; then
             echo "Fixed some Bugs Caused by Kernel Versions 5.15.0~5.15.123 only Supporting Older Versions of the C Library..."
             cp ../../Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
             patch -p1 < fix_5.15.legacy.patch
@@ -979,7 +980,7 @@ jobs:
           fi
 
           # ZRAM configuration*
-          if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
+          if [[ "${{ github.event.inputs.ZRAM }}" == 1/* ]]; then
             echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
             echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
             echo "CONFIG_CRYPTO_LZ4KD=y" >> "$CONFIG_FILE"
@@ -1078,11 +1079,12 @@ jobs:
           echo "Disabling GPUEB for MTK kernel 5.10"
           sed -i '/obj-y.*gpueb/d' kernel_workspace/kernel-5.10/drivers/gpu/mediatek/Makefile
 
-      - name: Build Kernel FAST
-        if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
+      - name: BUILD KERNEL FAST
+        if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
         id: fast_build
         run: |
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
+          echo "fallback=false" >> "$GITHUB_OUTPUT"
           cd kernel_workspace/kernel_platform
 
           # Automatic detection of LLVM IAS
