@@ -1047,11 +1047,23 @@ jobs:
             echo "CONFIG_BBG=y" >> "$CONFIG_FILE"
           fi
 
-          # IPSET & IPV6 NAT Configuration*
-          if [[ "${CPU}" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
+          # IPSET & IPV6 NAT Configuration
+          if [[ "$CPU" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
+          
+            echo "Applying IPSET & IPv6 NAT configuration..."
+
             if [[ "$KERNEL_VERSION" != "6.12" ]]; then
+              # Remove Existing Entry to Avoid Duplicates
+              sed -i '/CONFIG_BPF_STREAM_PARSER/d' "$CONFIG_FILE"
               echo "CONFIG_BPF_STREAM_PARSER=y" >> "$CONFIG_FILE"
+              echo "Enabled CONFIG BPF STREAM PARSER"
+            else
+              echo "Skipping CONFIG BPF STREAM PARSER for Kernel 6.12"
             fi
+
+          else
+            echo "Skipping IPSET and IPV6 NAT Configuration"
+          fi         
             echo "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y" >> "$CONFIG_FILE"
             echo "CONFIG_NETFILTER_XT_SET=y" >> "$CONFIG_FILE"
             echo "CONFIG_IP_SET=y" >> "$CONFIG_FILE"
@@ -1094,13 +1106,35 @@ jobs:
       - name: Fix IPV6 NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
+          set -e
+
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
-          cd kernel_workspace/kernel_platform/common
-          if [[ "${CPU}" == sm* ]]; then
-            echo "Fix potential false alarms from devices after enabling IPv6 NAT…"
-            patch -p1 -F 3 < "${PATCH_DIR}/IPv6_NAT_FIX.patch"
+          KERNEL_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
+
+          cd "$KERNEL_DIR"
+
+          echo "Detected CPU: ${CPU:-undefined}"
+
+          # Ensure CPU Variable is Set
+          if [ -z "$CPU" ]; then
+            echo "CPU Variable is Not Set, Skipping IPV6 NAT Fix"
+            exit 0
+          fi
+
+          # Apply Patch Only for Snapdragon (sm*) Platforms
+          if [[ "$CPU" == sm* ]]; then
+            echo "Applying IPV6 NAT Fix Patch..."
+      
+            if [ -f "${PATCH_DIR}/IPv6_NAT_FIX.patch" ]; then
+              patch -p1 -F 3 < "${PATCH_DIR}/IPv6_NAT_FIX.patch"
+              echo "IPV6 NAT Fix Applied Successfully"
+            else
+              echo "Patch File Not Found: IPv6_NAT_FIX.patch"
+              exit 1
+            fi
+
           else
-            echo "Your device does not support IPv6 NAT, skip this step"
+            echo "Device CPU Does Not Support IPV6 NAT, Skipping Patch"
           fi
 
       # -----------------------------
