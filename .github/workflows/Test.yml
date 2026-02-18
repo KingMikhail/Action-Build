@@ -776,7 +776,7 @@ jobs:
       # Patches
       # -----------------------------
       - name: Apply KSU META, SUSFS, ZRAM, and Legacy Kernel Patches
-        if: inputs.susfs_enable
+        if: ${{ github.event.inputs.SUSFS_META != '-1' }}
         run: |
           set -euo pipefail
 
@@ -1175,19 +1175,41 @@ jobs:
           set -e
 
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
-          cd kernel_workspace/kernel_platform/common
+          KERNEL_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
+          PATCH_FILE="${PATCH_DIR}/IPv6_NAT_FIX.patch"
 
           echo "Detected CPU: ${CPU:-undefined}"
 
-          # Apply Patch Only for Snapdragon (sm*) Platforms
+          # Ensure CPU Exists
+          if [[ -z "${CPU:-}" ]]; then
+            echo "CPU Variable Not Set, Skipping IPV6 NAT Fix"
+            exit 0
+          fi
+
+          # Snapdragon Only
           if [[ "$CPU" == sm* ]]; then
-            echo "Applying IPV6 NAT Fix Patch..."
-      
-            if [ -f "${PATCH_DIR}/IPv6_NAT_FIX.patch" ]; then
-              patch -p1 -F 3 < "${PATCH_DIR}/IPv6_NAT_FIX.patch"
+            echo "Snapdragon Platform Detected, Preparing to Apply IPV6 NAT Fix..."
+
+            # Validate Kernel Directory
+            if [[ ! -d "$KERNEL_DIR" ]]; then
+              echo "Kernel Directory Not Found: $KERNEL_DIR"
+              exit 1
+            fi
+
+            # Validate Patch File
+            if [[ ! -f "$PATCH_FILE" ]]; then
+              echo "IPV6 NAT Patch Not Found: $PATCH_FILE"
+              exit 1
+            fi
+
+            cd "$KERNEL_DIR"
+
+            # Apply Safely (Idempotent)
+            if patch -p1 -F 3 --dry-run < "$PATCH_FILE" > /dev/null 2>&1; then
+              patch -p1 -F 3 < "$PATCH_FILE"
               echo "IPV6 NAT Fix Applied Successfully"
             else
-              echo "Patch File Not Found: IPv6_NAT_FIX.patch"
+              echo "Patch Already Applied or Cannot be Applied Cleanly, Skipping..."
             fi
 
           else
