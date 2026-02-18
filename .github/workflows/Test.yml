@@ -87,6 +87,9 @@ on:
         options:
          - ReSukiSU
          - SukiSU-Ultra
+         - KernelSU-Next
+         - MKernelSU
+         - KernelSU
       ZRAM:
         type: string
         description: "ZRAM (0 for off, 1 for on)/algorithm name/size"
@@ -154,7 +157,7 @@ on:
 
 jobs:
   build:
-    name:  Liquid SukiSU/ReSukiSU
+    name:  Liquid KernelSU Forks
     runs-on: ubuntu-latest
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
@@ -689,7 +692,7 @@ jobs:
             # Store the Version Number to a GitHub Environment Variable
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             echo "KSUVERSION=$KSU_VERSION" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.event.inputs.KSU_META }} == "ksunext" ]]; then
+          elif [[ ${{ github.event.inputs.KSU_META }} == "KernelSU-Next" ]]; then
             echo "Configure KernelSU Next..."
             curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
             cd KernelSU-Next
@@ -704,7 +707,7 @@ jobs:
             cd ../common/drivers/kernelsu
             wget https://github.com/cctv18/oppo_oplus_realme_sm8750/raw/refs/heads/main/other_patch/apk_sign.patch
             patch -p2 -N -F 3 < apk_sign.patch || true
-          elif [[ ${{ github.event.inputs.KSU_META }} == "mksu" ]]; then
+          elif [[ ${{ github.event.inputs.KSU_META }} == "MKernelSU" ]]; then
             echo "Configure MKSU (5ec1cff/KernelSU)..."
             curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
             cd ./KernelSU
@@ -712,7 +715,7 @@ jobs:
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             echo "KSUVERSION=$KSU_VERSION" >> $GITHUB_OUTPUT
             sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" kernel/Kbuild
-          elif [[ ${{ github.event.inputs.KSU_META }} == "ksu" ]]; then
+          elif [[ ${{ github.event.inputs.KSU_META }} == "KernelSU" ]]; then
             echo "Configure KernelSU (tiann/KernelSU)..."
             curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
             cd ./KernelSU
@@ -724,7 +727,7 @@ jobs:
             echo "No Built-in KernelSU Mode has been Selected to Skip KernelSU Configuration..."
           fi
 
-      - name: Apply Patches ReSukiSU
+      - name: Apply Patches to Selected Root
         id: apply_patches
         env:
           FILE: ${{ github.event.inputs.FILE }}
@@ -927,7 +930,7 @@ jobs:
           CONFIG_FILE=./arch/arm64/configs/gki_defconfig
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
 
-          # ReSukiSU configuration
+          # Selected Root configuration
           echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
           echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
 
