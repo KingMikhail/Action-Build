@@ -724,7 +724,7 @@ jobs:
           elif [[ "$KSU_META" == "ReSukiSU" ]]; then
             echo "Configure ReSukiSU..."
             curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/refs/heads/main/kernel/setup.sh" | bash -s main
-            echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-%COMMIT_SHA%@Andrei"' >> ./common/arch/arm64/configs/gki_defconfig
+            echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%"' >> ./common/arch/arm64/configs/gki_defconfig
             cd ./KernelSU
            
             # Generate a Custom Version Number (Based on the Commit Count) to Use when it Fails 114514
