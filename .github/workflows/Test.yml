@@ -733,160 +733,168 @@ jobs:
             echo "No Built-in KernelSU Mode has been Selected to Skip KernelSU Configuration..."
           fi
 
-      - name: Apply Patches to Selected Root
-        id: apply_patches
-        env:
-          FILE: ${{ github.event.inputs.FILE }}
+            - name: Apply KSU META, SUSFS, ZRAM, and Legacy Kernel Patches
+        if: inputs.susfs_enable
         run: |
-          cd kernel_workspace
-          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
-            SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
-            git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}${{ github.event.inputs.SUSFS_DEV == 'true' && '-dev' || '' }}
-            cd susfs4ksu
-            if [ -n "$SUSFS_META" ]; then
-              if [[ "$SUSFS_META" =~ ^[0-9]+$ ]]; then
-                git checkout HEAD~$SUSFS_META
-              else
-                git checkout "$SUSFS_META"
-              fi
+          set -euo pipefail
+
+          # -----------------------------
+          # Environment Setup
+          # -----------------------------
+          KSU_META="${{ github.event.inputs.KSU_META }}"
+          ANDROID_VERSION="${{ env.ANDROID_VERSION }}"
+          KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
+          KANDROID_VERSION="${{ env.KANDROID_VERSION }}"
+          SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
+          XUS_FIX="${{ github.event.inputs.XUS_FIX }}"
+          FILE="${{ github.event.inputs.FILE }}"
+          ZRAM="${{ github.event.inputs.ZRAM }}"
+          WORKDIR="kernel_workspace"
+          cd "$WORKDIR"
+
+          # -----------------------------
+          # Helper Functions
+          # -----------------------------
+          clone_susfs() {
+            git clone --depth=1 https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${ANDROID_VERSION}-${KERNEL_VERSION}
+          }
+
+          download_patch() {
+            local url="$1"
+            local dest="$2"
+            wget "$url" -O "$dest"
+          }
+
+          copy_common_patches() {
+            mkdir -p common/fs common/include/linux
+            cp ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${ANDROID_VERSION}-${KERNEL_VERSION}.patch ./common/
+            cp ./susfs4ksu/kernel_patches/fs/* ./common/fs/
+            cp ./susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+          }
+
+          apply_patch() {
+            local patch_file="$1"
+            local options="${2:-}"
+            if [ -f "$patch_file" ]; then
+              patch -p1 $options < "$patch_file" || echo "Warning: Failed to Apply $patch_file"
             else
-              echo "If SUSFS_META is empty, use the latest upstream SUSFS"
+              echo "Patch $patch_file Not Found, Skipping..."
             fi
+          }
+
+            fix_vma_undeclared() {
+              sed -i 's|vma = find_vma(mm|struct vm_area_struct *&|' ./fs/proc/task_mmu.c
+          }
+
+            fix_ksu_makefile_patch() {
+            local patch_file="$1"
+            if [ -f "$patch_file" ] && grep -q "a/kernel/Makefile" "$patch_file"; then
+              sed -i 's|kernel/Makefile|kernel/Kbuild|g' "$patch_file"
+              sed -i 's|^@@ .* format:.*|@@ -94,4 +94,13 @@|' "$patch_file"
+              sed -i 's|.*check-format:.*| ccflags-y += -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat -Wno-missing-prototypes|' "$patch_file"
+              sed -i 's|.*clang-format --dry-run.*| ccflags-y += -Wno-declaration-after-statement -Wno-unused-function -Wno-unused-variable|' "$patch_file"
+            fi
+          }
+
+          # -----------------------------
+          # Apply KSU META Specific Patches
+          # -----------------------------
+          case "$KSU_META" in
+            SukiSU-Ultra|ReSukiSU|KernelSU-Next|MKernelSU|KernelSU)
+              echo "Applying Patches for KSU META: $KSU_META"
+              clone_susfs
+              download_patch "https://github.com/KingMikhail/Action-Build/raw/refs/heads/LiquidAndrei/patches/69_hide_stuff.patch" ./common/69_hide_stuff.patch
+              copy_common_patches
+
+              [[ "$KSU_META" == "ReSukiSU" ]] && fix_vma_undeclared
+
+              if [[ "$KSU_META" == "KernelSU" || "$KSU_META" == "MKernelSU" ]]; then
+                mkdir -p KernelSU
+                cp ./susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU/
+                fix_ksu_makefile_patch ./KernelSU/10_enable_susfs_for_ksu.patch
+                cd KernelSU
+                apply_patch 10_enable_susfs_for_ksu.patch
+
+                if [[ "$KSU_META" == "MKernelSU" ]]; then
+                  download_patch "https://github.com/KingMikhail/Action-Build/raw/refs/heads/LiquidAndrei/patches/mksu_supercalls.patch" ./mksu_supercalls.patch
+                  apply_patch mksu_supercalls.patch
+                fi
+                cd ../common
+              fi
+
+              apply_patch 50_add_susfs_in_gki-${ANDROID_VERSION}-${KERNEL_VERSION}.patch
+              [[ "$KSU_META" == "KernelSU-Next" || "$KSU_META" == "MKernelSU" || "$KSU_META" == "KernelSU" ]] && apply_patch 69_hide_stuff.patch "-N -F 3" || apply_patch 69_hide_stuff.patch
+              ;;
+
+            *)
+              echo "No Builtin KSU Type Selected, Skipping SUSFS Configuration"
+              ;;
+          esac
+
+          # -----------------------------
+          # Apply Optional SUSFS META Patches
+          # -----------------------------
+          if [[ "$SUSFS_META" != "-1" ]]; then
+            echo "Applying SUSFS META Patches..."
+            git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${KANDROID_VERSION}-${KERNEL_VERSION}${{ github.event.inputs.SUSFS_DEV == 'true' && '-dev' || '' }}
+            cd susfs4ksu
+            [[ "$SUSFS_META" =~ ^[0-9]+$ ]] && git checkout HEAD~$SUSFS_META || git checkout "$SUSFS_META"
             cd ..
-          fi
-          git clone https://github.com/ShirkNeko/SukiSU_patch.git
-          git clone https://github.com/KingMikhail/Action-Build.git
-          cd kernel_platform
-          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
-            echo "Pulling SUSFS patch"
-            wget https://github.com/KingMikhail/Action-Build/raw/refs/heads/LiquidAndrei/patches/69_hide_stuff.patch -O ./common/69_hide_stuff.patch
-            cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
+
+            git clone https://github.com/ShirkNeko/SukiSU_patch.git
+            git clone https://github.com/KingMikhail/Action-Build.git
+
+            cd kernel_platform
+            download_patch "https://github.com/KingMikhail/Action-Build/raw/refs/heads/LiquidAndrei/patches/69_hide_stuff.patch" ./common/69_hide_stuff.patch
+            cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${KANDROID_VERSION}-${KERNEL_VERSION}.patch ./common/
             cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
             cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
-          fi
 
-          if [[ "${{ github.event.inputs.ZRAM }}" == 1/* ]]; then
-            echo "Pulling ZRAM patch"
-            cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux/
-            cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib/
-            cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto/
-            cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
-          fi
-
-          cd ./common
-          GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
-          SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
-
-          if [[ "$GKI_V" == "android13-5.15" && -n "$SUBLEVEL" && "$SUBLEVEL" -lt 123 ]]; then
-            echo "Fixed Some Bugs Caused by Kernel Versions 5.15.0~5.15.123 only Supporting Older Versions of the C Library..."
-            cp ../../Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
-            patch -p1 < fix_5.15.legacy.patch
-            echo "Fix 5.15 Patch Complete!"
-          fi
-
-          if [[ "$KV1" == "6" && -n "$KV2" && "$KV2" -le 6630 && "${{ github.event.inputs.SUSFS_META }}" != "-1" ]]; then
-            TRUSTY_EXISTS="false"
-            if grep -q 'common-modules/trusty' "$GITHUB_WORKSPACE/.repo/manifests_fallback/${FILE}.xml"; then
-              TRUSTY_EXISTS="true"
-            fi
-            echo "trusty_exists=$TRUSTY_EXISTS" >> $GITHUB_OUTPUT
-            if [[ "$TRUSTY_EXISTS" == "false" ]]; then
-              echo "Fixed a SUSFS Error Caused by Absence of TrustyOS in Source Code and Inventory for Models with Kernel Versions 6.6.0~6.6.30"
-              sed -i 's/-32,12 +32,38/-32,11 +32,37/g' 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
-              sed -i '/#include <trace\/hooks\/fs.h>/d' 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
-            fi
-          fi
-
-          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
-            # Fake Patch to Fix Failures
-            fake_patched=0
-            if [ "$GKI_V" = "android15-6.6" ]; then
-              if ! grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
-                echo "NR Subpages Not Found, Patches Underway..."
-                sed -i -e '/int ret = 0, copied = 0;/a \\tunsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;' -e '/int ret = 0, copied = 0;/a \\tpagemap_entry_t \*res = NULL;' ./fs/proc/task_mmu.c
-                fake_patched=1
-              fi
-            fi
-            if [ "$GKI_V" = "android12-5.10" ] || [ "$GKI_V" = "android13-5.15" ] || [ "$GKI_V" = "android14-6.1" ]; then
-              if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then
-                echo "VMA Pages Not Found, Patches Underway..."
-                fake_patched=1
-                echo "Fake Patches Complete!"
-              fi
+            # -----------------------------
+            # Apply ZRAM Patch
+            # -----------------------------
+            if [[ "$ZRAM" == 1/* ]]; then
+              echo "Applying SUKISU ZRAM patches..."
+              cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux/
+              cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib/
+              cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto/
+              cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
             fi
 
-            # Apply SUSFS Patch with Error Handling
-            echo "Add SUSFS Patches Underway..."
-            if ! patch -p1 < 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch; then
-              echo "Warning: SUSFS Patch Failed, Continuing..."
+            # -----------------------------
+            # Legacy 5.15 Kernel Fix Patch
+            # -----------------------------
+            GKI_V="${KANDROID_VERSION}-${KERNEL_VERSION}"
+            SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
+            if [[ "$GKI_V" == "android13-5.15" && -n "$SUBLEVEL" && "$SUBLEVEL" -lt 123 ]]; then
+              echo "Applying Legacy 5.15 Kernel Fix..."
+              cp ../../Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
+              apply_patch fix_5.15.legacy.patch
+              echo "Legacy 5.15 Patch Applied"
             fi
 
-            # Apply Hide-Stuff Patch
-            echo "Add 69 Hide Stuff Patches..."
-            if ! patch -p1 < 69_hide_stuff.patch; then
-              echo "Warning: 69 Hide Stuff patches Failed, Continuing..."
-            fi
-
-            echo "SUSFS Patches Application Complete"
+            cd common
+            apply_patch 50_add_susfs_in_gki-${KANDROID_VERSION}-${KERNEL_VERSION}.patch
+            apply_patch 69_hide_stuff.patch
+            echo "SUSFS META Patching Complete"
           else
-            echo "SUSFS_META is -1, Skipping SUSFS Patches"
+            echo "SUSFS META is -1, Skipping SUSFS META Patches"
           fi
-          
-            # Revert Fake Patches Applied Earlier
-            if [ "${fake_patched:-0}" -eq 1 ]; then
-              case "$GKI_V" in
-                "android15-6.6")
-                  TASK_FILE="./fs/proc/task_mmu.c"
-                  # Remove Inserted Fake Variables if They Exist
-                  if grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' "$TASK_FILE"; then
-                    sed -i -e '/unsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;/d' \
-                           -e '/pagemap_entry_t \*res = NULL;/d' "$TASK_FILE"
-                    echo "Reverted Fake Patch for Android15-6.6"
-                  fi
-                  ;;
-                "android12-5.10"|"android13-5.15"|"android14-6.1")
-                  TASK_FILE="./fs/proc/task_mmu.c"
-                  # Replace the Fake go to Line with Return 0 if Present
-                  if grep -qxF $'\t\tgoto show_pad;' "$TASK_FILE"; then
-                    sed -i 's/goto show_pad;/return 0;/' "$TASK_FILE"
-                    echo "Reverted Fake Patch for $GKI_V"
-                  fi
-                  ;;
-              esac    
-            fi
 
-            # Apply Optional XUS Fix Patch
-            if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ] && [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
-              XUS_PATCH="../../Action-Build/patches/No_5uS.patch"
-              if [ -f "$XUS_PATCH" ]; then
-                cp "$XUS_PATCH" .
-                if patch -p1 < No_5uS.patch; then
-                  echo "Applied XUS Fix Patch Successfully"
-                else
-                  echo "Warning: XUS Fix Patch Failed, Continuing..."
-                fi
-              else
-                echo "XUS Fix Patch Not Found at $XUS_PATCH, Skipping..."
-              fi
-            fi
+          # -----------------------------
+          # Optional OGKI → GKI Conversion
+          # -----------------------------
+          if [[ ${{ startsWith(env.KERNEL_VERSION, '6.') && github.event.inputs.SCHED == 'false' }} ]]; then
+            PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
+            cd kernel_platform/common
+            sed -i '1iobj-y += hmbird_patch.o' drivers/Makefile
+            patch -p1 -F 3 < "${PATCH_DIR}/hmbird_patch.patch" || true
+            echo "OGKI → GKI Conversion Patches Applied"
+          fi            
 
-      # OGKI to GKI conversion, No Dtbo and Boot Modification Required
-      - name: Apply Convert Hmbird OGKI to Hmbird GKI
-        if: ${{ startsWith(env.KERNEL_VERSION, '6.') && github.event.inputs.SCHED == 'false' }}
-        run: |
-          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
-          cd kernel_workspace/kernel_platform/common
-          for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
-            [ -d "$p" ] && {
-              echo "Source Code for Fengchi Already Exists; Enable Secondary Rollback"
-              exit 0
-            }
-          done
-          sed -i '1iobj-y += hmbird_patch.o' drivers/Makefile
-          echo "Applying OGKI to GKI Conversion Patches"
-          patch -p1 -F 3 < "${PATCH_DIR}/hmbird_patch.patch" || true
-          echo "OGKI to GKI Patches Conversion Complete"
-
+      # -----------------------------
+      # Unicode Bypass Fix Patches
+      # -----------------------------
       - name: Apply Unicode Bypass
         if: ${{ github.event.inputs.UNICODE_BYPASS == 'true' }}
         run: |
@@ -898,6 +906,9 @@ jobs:
             patch -p1 --forward < "${PATCH_DIR}/unicode_bypass_fix_6.1+.patch" || true
           fi
 
+      # -----------------------------
+      # ZRAM
+      # -----------------------------
       - name: Apply ZRAM
         if: startsWith(github.event.inputs.ZRAM, '1/')
         run: |
@@ -925,6 +936,9 @@ jobs:
           patch -p1 -F 3 < "${PATCH_DIR}/lz4k_oplus.patch" || true
           echo 'LZ4K OPlus Patches Complete'
 
+      # -----------------------------
+      # Sched Windspeed Fengchi
+      # -----------------------------
       - name: Apply Sched
         env:
           FILE: ${{ github.event.inputs.FILE }}
@@ -949,7 +963,10 @@ jobs:
             echo "No Patch Found, Windspeed Kernel does not Currently Support your Device Model, Close and Try Again"
             exit 12
           fi
-
+          
+      # -----------------------------
+      # LSM Baseband Guard
+      # -----------------------------
       - name: Apply LSM Baseband Guard
         if: ${{ github.event.inputs.LSM == 'true' }}
         run: |
@@ -958,7 +975,9 @@ jobs:
           curl -LSs https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/fix_blkdev_rename/setup.sh | bash -s fix_blkdev_rename
           sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' ./security/Kconfig
 
+      # -----------------------------
       # Configuration Information, Marked with * Indicates Additional Items, Which Carry a Certain Degree of Risk and Uncertainty
+      # -----------------------------
       - name: Add Configuration Settings
         run: |
           cd kernel_workspace/kernel_platform/common
@@ -1068,7 +1087,10 @@ jobs:
 
           # Remove Build Review
           sed -i 's/check_defconfig//' ./build.config.gki
-
+          
+      # -----------------------------
+      # BetterNet
+      # -----------------------------
       - name: Fix IPV6 NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
@@ -1081,7 +1103,9 @@ jobs:
             echo "Your device does not support IPv6 NAT, skip this step"
           fi
 
+      # -----------------------------
       # Custom Kernel Build Time, Without Adding #1 SMP PREEMPT
+      # -----------------------------
       - name: Custom Build Time
         shell: bash
         run: |
@@ -1107,12 +1131,18 @@ jobs:
             fi
           done
 
+      # -----------------------------
+      # Disable GPUEB
+      # -----------------------------
       - name: Disable GPUEB
         if: ${{ env.KERNEL_VERSION == '5.10' && startsWith(env.CPU, 'mt') }}
         run: |
           echo "Disabling GPUEB for MTK Kernel 5.10"
           sed -i '/obj-y.*gpueb/d' kernel_workspace/kernel-5.10/drivers/gpu/mediatek/Makefile
 
+      # -----------------------------
+      # Fast Build
+      # -----------------------------
       - name: Build Kernel Fast
         if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
         id: fast_build
@@ -1169,12 +1199,12 @@ jobs:
           # Get Parent Directory Name of Clang Prebuilt Bin and Assign it to Clang Path
           CLANG_PATH=$(basename "$(dirname "$CLANG_PREBUILT_BIN")")
 
-          echo "============================"
+          echo "-----------------------------"
           echo "CLANG_VERSION=$CLANG_VERSION"
           echo "CLANG_DIR=$CLANG_DIR"
           echo "CLANG_PATH=$CLANG_PATH"
           echo "USE_LLVM_IAS=$USE_LLVM_IAS"
-          echo "============================"
+          echo "-----------------------------"
 
           set +u
           source "$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/build/kernel/_setup_env.sh" 2>/dev/null || true
@@ -1235,6 +1265,9 @@ jobs:
           make -j"$(nproc --all)" O=out "${MAKE_ARGS[@]}"
           ccache -s
 
+      # -----------------------------
+      # Fallback to Build Kernel
+      # -----------------------------
       - name: Fallback to Build Kernel
         if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
         run: |
@@ -1247,6 +1280,9 @@ jobs:
             ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
           fi
 
+      # -----------------------------
+      # Clone AnyKernel3 Repository
+      # -----------------------------
       - name: Make AnyKernel3
         run: |
           git clone https://github.com/KingMikhail/AnyKernel3 --depth=1
@@ -1274,7 +1310,10 @@ jobs:
             cp "$image_path" ./AnyKernel3/Image
             cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
           fi
-
+          
+      # -----------------------------
+      # SukiSU and ReSukiSU Builtin KPM Function
+      # -----------------------------
       - name: Apply Patch Linux and Replace Image
         if: ${{ github.event.inputs.KPM == 'KPM' }}
         run: |
@@ -1288,17 +1327,26 @@ jobs:
           mv oImage Image
           cp Image "${GITHUB_WORKSPACE}/AnyKernel3/Image"
 
+      # -----------------------------
+      # Zip Suffix
+      # -----------------------------
       - name: Set Zip Suffix
         id: suffix
         run: |
           echo "value=${{ env.ZRAM_ALGO_U && format('_{0}', env.ZRAM_ALGO_U) || '' }}${{ github.event.inputs.KPM == 'KPM' && '_KPM' || github.event.inputs.KPM == 'KPN' && '_KPN' || '' }}${{ github.event.inputs.LSM == 'true' && '_LSM' || '' }}_ILH${{ github.event.inputs.SCHED== 'true' && '_SCHED' || '' }}" >> $GITHUB_OUTPUT
 
+      # -----------------------------
+      # Upload AnyKernel3 Zip
+      # -----------------------------
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
           name: AK3-${{ github.event.inputs.KSU_META }}-${{ env.KSUVER }}-${{ github.run_number }}
           path: ./AnyKernel3/*
-
+          
+      # -----------------------------
+      # Extract and Process ZRAM Module
+      # -----------------------------
       - name: Extract and Process ZRAM Module
         if: startsWith(github.event.inputs.ZRAM, '1/')
         id: zram_find
@@ -1352,6 +1400,9 @@ jobs:
             exit 0
           fi
 
+      # -----------------------------
+      # Upload ZRAM Module
+      # -----------------------------
       - name: Upload ZRAM Module
         if: startsWith(github.event.inputs.ZRAM, '1/') && steps.zram_find.outputs.upload != 'false'
         uses: actions/upload-artifact@v4
@@ -1359,5 +1410,8 @@ jobs:
           name: ZRAM-Module_${{ env.KERNEL_VERSION }}_${{ steps.extract_info.outputs.value }}
           path: ZRAM-Module/*
 
+      # -----------------------------
+      # Post-build Disk Check
+      # -----------------------------
       - name: Post-build Disk Check
         run: df -h
