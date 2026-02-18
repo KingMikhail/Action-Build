@@ -625,9 +625,11 @@ jobs:
               [ -n "$KSU_API_VERSION" ] && break || sleep 1
             done
             
-            # If the Acquisition Fails, Use the Default Version Number 3.1.7
-            [ -z "$KSU_API_VERSION"
-            [ -z "$KSU_API_VERSION" ] && KSU_API_VERSION="3.1.7"
+            # If acquisition fails, fallback to default
+            if [ -z "$KSU_API_VERSION" ]; then
+               KSU_API_VERSION="3.1.7"
+            fi
+
             
             # Store API Version Number to a GitHub Environment Variable
             echo "KSU_API_VERSION=$KSU_API_VERSION" >> $GITHUB_ENV
