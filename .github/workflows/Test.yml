@@ -1108,7 +1108,7 @@ jobs:
         run: |
           set -e
 
-          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
+          PATCH_DIR="${GITHUB_WORKSPACE}/patches"
           KERNEL_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
 
           cd "$KERNEL_DIR"
