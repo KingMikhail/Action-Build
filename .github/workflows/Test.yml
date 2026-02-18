@@ -676,7 +676,7 @@ jobs:
             grep -A10 "REPO_OWNER" kernel/Kbuild  # Check the Contents After the Insertion Point
             grep "KSU_VERSION_FULL" kernel/Kbuild # Confirm that the Version Definition Exists
             echo "SukiSU-Ultra Version Number: v${KSU_API_VERSION}-${GIT_COMMIT_HASH}@Andrei"
-          elif [[ ${{ github.event.inputs.KSU_META }} == "ReSukiSU-Main" ]]; then
+          elif [[ ${{ github.event.inputs.KSU_META }} == "ReSukiSU" ]]; then
             echo "Configure ReSukiSU..."
             curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/refs/heads/main/kernel/setup.sh" | bash -s main
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-%COMMIT_SHA%@Andrei"' >> ./common/arch/arm64/configs/gki_defconfig
@@ -724,13 +724,14 @@ jobs:
           fi
 
       - name: Apply Patches ReSukiSU
+        id: apply_patches
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
           cd kernel_workspace
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
             SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
-            git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}${{ github.inputs.SUSFS_DEV == 'true' && '-dev' || '' }}
+            git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}${{ github.event.inputs.SUSFS_DEV == 'true' && '-dev' || '' }}
             cd susfs4ksu
             if [ -n "$SUSFS_META" ]; then
               if [[ "$SUSFS_META" =~ ^[0-9]+$ ]]; then
@@ -831,8 +832,8 @@ jobs:
           fi
 
       # OGKI to GKI conversion, no dtbo boot modification required
-      - name: Apply Convert HMBIRD_OGKI to HMBIRD_GKI
-        if: ${{ fromJSON(env.KV1) >= 6 && fromJSON(env.KV2) >= 66 && github.event.inputs.SCHED == 'false' }}
+      - name: Apply Convert HMBIRD OGKI to HMBIRD GKI
+        if: ${{ env.KV1 == '6' && github.event.inputs.SCHED == 'false' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
           cd kernel_workspace/kernel_platform/common
@@ -920,7 +921,6 @@ jobs:
           cd kernel_workspace/kernel_platform/common
           CONFIG_FILE=./arch/arm64/configs/gki_defconfig
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
-          MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
 
           # ReSukiSU configuration
           echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
@@ -935,6 +935,9 @@ jobs:
           fi
           if [ "${{ github.event.inputs.KPM }}" = "KPN" ]; then
             echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
+            else [ "${{ github.event.inputs.KPM }}" = "NoN" ]; then
+            echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
+            fi
           fi
 
           # SUSFS configuration
