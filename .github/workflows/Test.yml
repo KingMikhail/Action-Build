@@ -1097,6 +1097,7 @@ jobs:
           # Read CLANG_PREBUILT_BIN from build.config.common
           CLANG_PREBUILT_BIN=""
           for f in ./common/build.config.common ${PATH_2:+./$PATH_2/build.config.common}; do
+          PATH_2="${PATH_2:-}"
             [[ -f "$f" ]] || continue
             CLANG_PREBUILT_BIN=$(grep '^CLANG_PREBUILT_BIN=' "$f" | cut -d'=' -f2)
             [[ -n "$CLANG_PREBUILT_BIN" ]] && break
@@ -1104,7 +1105,7 @@ jobs:
           if [[ -z "$CLANG_PREBUILT_BIN" ]]; then
             echo "⚠️ CLANG_PREBUILT_BIN was not found in build.config.common, revert to the official build script"
             echo "fallback=true" >> "$GITHUB_OUTPUT"
-            echo "Please consider disabling FAST_BUILD and submit an issue"
+            echo "Please Consider Disabling Fast Build and Submit an Issue"
             exit 0
           fi
 
