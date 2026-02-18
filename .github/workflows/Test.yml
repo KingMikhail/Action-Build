@@ -471,9 +471,10 @@ jobs:
           fi
 
           # Kernel version number conversion (for comparison)
-          echo "KV1=${BRANCH#*-}"       | cut -d. -f1 >> $GITHUB_ENV
-          echo "KV2=${BRANCH#*-}"       | tr -d '.' >> $GITHUB_ENV
-          echo "KV3=${NEW_VERSION}"     | tr -d '.' >> $GITHUB_ENV
+          KV_TMP="${BRANCH#*-}"
+          echo "KV1=$(echo "$KV_TMP" | cut -d. -f1)" >> $GITHUB_ENV
+          echo "KV2=$(echo "$KV_TMP" | tr -d '.')" >> $GITHUB_ENV
+          echo "KV3=$(echo "$NEW_VERSION" | tr -d '.')" >> $GITHUB_ENV
 
       - name: Rust Version Handling
         run: |
@@ -833,7 +834,7 @@ jobs:
 
       # OGKI to GKI conversion, no dtbo boot modification required
       - name: Apply Convert HMBIRD OGKI to HMBIRD GKI
-        if: ${{ env.KV1 == '6' && github.event.inputs.SCHED == 'false' }}
+        if: ${{ startsWith(env.KERNEL_VERSION, '6.') && github.event.inputs.SCHED == 'false' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
           cd kernel_workspace/kernel_platform/common
@@ -929,9 +930,6 @@ jobs:
           # ReSukiSU configuration
           echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
           echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
-          if [[ -n "$KSU_CUSTOM_TAG" ]]; then
-            echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-${KSU_CUSTOM_TAG}@${MANAGER_BRANCH}[%COMMIT_SHA%]\"" >> "$CONFIG_FILE"
-          fi
 
           # KPM Configuration
           case "${{ github.event.inputs.KPM }}" in
