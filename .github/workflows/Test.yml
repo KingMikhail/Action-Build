@@ -1175,17 +1175,9 @@ jobs:
           set -e
 
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
-          KERNEL_DIR="kernel_workspace/kernel_platform/common"
-
-          cd "$KERNEL_DIR"
+          cd kernel_workspace/kernel_platform/common
 
           echo "Detected CPU: ${CPU:-undefined}"
-
-          # Ensure CPU Variable is Set
-          if [ -z "$CPU" ]; then
-            echo "CPU Variable is Not Set, Skipping IPV6 NAT Fix"
-            exit 0
-          fi
 
           # Apply Patch Only for Snapdragon (sm*) Platforms
           if [[ "$CPU" == sm* ]]; then
@@ -1196,11 +1188,10 @@ jobs:
               echo "IPV6 NAT Fix Applied Successfully"
             else
               echo "Patch File Not Found: IPv6_NAT_FIX.patch"
-              exit 1
             fi
 
           else
-            echo "Device CPU Does Not Support IPV6 NAT, Skipping Patch"
+            echo "Non-Snapdragon Platform Detected, Skipping IPV6 NAT Fix"
           fi
 
       # -----------------------------
