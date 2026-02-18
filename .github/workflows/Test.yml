@@ -709,7 +709,7 @@ jobs:
            
             # Add WildKSU Manager Support for KernelSU-Next
             cd ../common/drivers/kernelsu
-            wget https://github.com/KingMikhail/Action-Build/raw/refs/heads/main/patches/apk_sign.patch
+            wget https://github.com/KingMikhail/Action-Build/raw/refs/heads/LiquidAndrei/patches/apk_sign.patch
             patch -p2 -N -F 3 < apk_sign.patch || true
          
           elif [[ "$KSU_META" == "MKernelSU" ]]; then
