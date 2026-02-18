@@ -179,7 +179,10 @@ jobs:
           remove-haskell: 'true'
           remove-codeql: 'true'
 
-      - name: Extract Manifest Info
+      # -----------------------------
+      # Extract Manifest Information
+      # -----------------------------     
+      - name: Extract Manifest Information
         id: extract_info
         env:
           FILE: ${{ github.event.inputs.FILE }}
@@ -319,7 +322,10 @@ jobs:
 
           # Convey Combined Information
           echo "value=${FILE_BASE}_Android${ANDROID_VERSION}" >> "$GITHUB_OUTPUT"
-
+          
+      # -----------------------------
+      # Debug Show Selected Inputs
+      # -----------------------------     
       - name: Debug Show Selected Inputs
         run: |
           echo "============================"
@@ -348,9 +354,15 @@ jobs:
           echo "Selected XUS_FIX: ${{ github.event.inputs.XUS_FIX }}"
           echo "============================"
 
+      # -----------------------------
+      # Check Disk Space
+      # -----------------------------     
       - name: Check Disk Space
         run: df -h
 
+      # -----------------------------
+      # Create and Enable 3G Swap
+      # -----------------------------
       - name: Create and Enable 3G Swap
         run: |
           sudo swapoff -a
@@ -360,6 +372,9 @@ jobs:
           sudo swapon /swapfile
           free -h
 
+      # -----------------------------
+      # Set Cache Environment
+      # -----------------------------
       - name: Set Cache Environment
         if: ${{ github.event.inputs.BUILD_NOCCACHE == 'false' }}
         run: |
@@ -367,17 +382,26 @@ jobs:
           mkdir -p "$HOME/.ccache_${{ github.event.inputs.FILE }}"
           echo "set: $HOME/.ccache_${{ github.event.inputs.FILE }}"
 
+      # -----------------------------
+      # Configure Git
+      # -----------------------------
       - name: Configure Git
         run: |
           git config --global user.name "KingMikhail"
           git config --global user.email "andreimikhail1987@gmail.com"
 
+      # -----------------------------
+      # Install Dependencies + APTC
+      # -----------------------------
       - name: Install Dependencies + APTC
         uses: awalsh128/cache-apt-pkgs-action@latest 
         with: 
           packages: python3 git curl ccache libelf-dev build-essential flex bison libssl-dev libncurses-dev liblz4-tool zlib1g-dev libxml2-utils rsync unzip gawk dos2unix kmod libdw-dev elfutils
           execute_install_scripts: true
 
+      # -----------------------------
+      # Restore Ccache
+      # -----------------------------
       - name: Restore Ccache
         if: ${{ github.event.inputs.BUILD_NOCCACHE == 'false' }}
         uses: actions/cache@v3
@@ -385,6 +409,9 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.event.inputs.FILE }}-${{ env.BUILD_METHOD }}-${{ github.event.inputs.FAST_BUILD == 'true' && 'alpha' || 'beta' }}-16.1
 
+      # -----------------------------
+      # Initialize Ccache
+      # -----------------------------
       - name: Initialize Ccache
         if: ${{ github.event.inputs.BUILD_NOCCACHE == 'false' }}
         run: |
@@ -403,13 +430,19 @@ jobs:
             echo "Skip if Ccache is Not Installed"
           fi
           ccache -s
-
+          
+      # -----------------------------
+      # Install Repo Tool
+      # -----------------------------
       - name: Install Repo Tool
         run: |
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
           chmod a+x ~/repo
           sudo mv ~/repo /usr/local/bin/repo
 
+      # -----------------------------
+      # Initialize Repo and Sync
+      # -----------------------------
       - name: Initialize Repo and Sync
         env:
           FILE: ${{ github.event.inputs.FILE }}
@@ -430,6 +463,9 @@ jobs:
             rm -f "$dir/android/abi_gki_protected_exports_"* 2>/dev/null || echo "No protected exports in $dir"
           done
 
+      # -----------------------------
+      # Kernel Version Handling
+      # -----------------------------
       - name: Kernel Version Handling
         run: |
           cd kernel_workspace/kernel_platform
@@ -595,8 +631,11 @@ jobs:
 
           git add -A
           git commit -m "Random suffix & remove -dirty"
-      
-      - name: Add Selected Root Manager
+          
+      # -----------------------------
+      # Selected Root Manager
+      # -----------------------------
+      - name: Add Selected KSU Meta
         run: |
           # Go to Kernel Working Directory
           cd kernel_workspace/kernel_platform
@@ -733,6 +772,9 @@ jobs:
             echo "No Built-in KernelSU Mode has been Selected to Skip KernelSU Configuration..."
           fi
 
+      # -----------------------------
+      # Patches
+      # -----------------------------
       - name: Apply KSU META, SUSFS, ZRAM, and Legacy Kernel Patches
         if: inputs.susfs_enable
         run: |
