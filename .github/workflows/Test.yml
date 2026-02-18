@@ -1096,7 +1096,7 @@ jobs:
 
           # Read CLANG_PREBUILT_BIN from build.config.common
           CLANG_PREBUILT_BIN=""
-          for f in ./common/build.config.common ./"$PATH_2"/build.config.common; do
+          for f in ./common/build.config.common ${PATH_2:+./$PATH_2/build.config.common}; do
             [[ -f "$f" ]] || continue
             CLANG_PREBUILT_BIN=$(grep '^CLANG_PREBUILT_BIN=' "$f" | cut -d'=' -f2)
             [[ -n "$CLANG_PREBUILT_BIN" ]] && break
