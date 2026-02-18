@@ -733,7 +733,7 @@ jobs:
             echo "No Built-in KernelSU Mode has been Selected to Skip KernelSU Configuration..."
           fi
 
-            - name: Apply KSU META, SUSFS, ZRAM, and Legacy Kernel Patches
+      - name: Apply KSU META, SUSFS, ZRAM, and Legacy Kernel Patches
         if: inputs.susfs_enable
         run: |
           set -euo pipefail
